@@ -36,7 +36,7 @@ def text(pdf, txt, stretching, nostamp):
             txtw = txt.replace("\n", " ")
         else:
             txtw = txt
-        pdf.multi_cell(w = 0, h = 8, txt = txtm + a + "\n" + txtw, border = 1, align = a)
+        pdf.multi_cell(width= 0, height= 8, text=txtm + a + "\n" + txtw, border = 1, align = a)
         pdf.write(8, "\n")
     pdf.write(8, "\n")
     

@@ -33,16 +33,33 @@ FPDF_CACHE_MODE = 0 # 0 - in same folder, 1 - none, 2 - hash
 FPDF_CACHE_DIR = None
 SYSTEM_TTFONTS = None
 
-PAGE_FORMATS = {
-    "a3": (841.89, 1190.55),
-    "a4": (595.28, 841.89),
-    "a5": (420.94, 595.28),
-    "letter": (612, 792),
-    "legal": (612, 1008),
-}
+
+def get_page_dimensions(format: str, scale: float):
+    """
+    Returns the document dimensions (width and height) in points (pixels)
+    """
+
+    PAGE_FORMATS = {
+        "a3": (841.89, 1190.55),
+        "a4": (595.28, 841.89),
+        "a5": (420.94, 595.28),
+        "letter": (612, 792),
+        "legal": (612, 1008)
+    }
+
+    if isinstance(format, basestring):
+        format = format.lower()
+        if format in PAGE_FORMATS:
+            return PAGE_FORMATS[format]
+        else:
+            raise ValueError(f"Unknown page format: {format}. Allowed formats: {PAGE_FORMATS.keys()}")
+    else:
+        return format[0] * scale, format[1] * scale
+
 
 def set_global(var, val):
     globals()[var] = val
+
 
 def load_cache(filename):
     """Return unpickled object, or None if cache unavailable"""
@@ -54,8 +71,19 @@ def load_cache(filename):
     except (IOError, ValueError):  # File missing, unsupported pickle, etc
         return None
 
+
 class FPDF(object):
-    "PDF Generation class"
+
+    core_fonts = {
+        'courier': 'Courier', 'courierB': 'Courier-Bold',
+        'courierI': 'Courier-Oblique', 'courierBI': 'Courier-BoldOblique',
+        'helvetica': 'Helvetica', 'helveticaB': 'Helvetica-Bold',
+        'helveticaI': 'Helvetica-Oblique',
+        'helveticaBI': 'Helvetica-BoldOblique',
+        'times': 'Times-Roman', 'timesB': 'Times-Bold',
+        'timesI': 'Times-Italic', 'timesBI': 'Times-BoldItalic',
+        'symbol': 'Symbol', 'zapfdingbats': 'ZapfDingbats'
+    }
 
     def __init__(self, orientation = 'P', unit = 'mm', format = 'A4'):
         # Some checks
@@ -87,55 +115,30 @@ class FPDF(object):
         self.color_flag = 0             # indicates whether fill and text colors are different
         self.ws = 0                     # word spacing
         self.angle = 0
-        # Standard fonts
-        self.core_fonts={'courier': 'Courier', 'courierB': 'Courier-Bold',
-            'courierI': 'Courier-Oblique', 'courierBI': 'Courier-BoldOblique',
-            'helvetica': 'Helvetica', 'helveticaB': 'Helvetica-Bold',
-            'helveticaI': 'Helvetica-Oblique',
-            'helveticaBI': 'Helvetica-BoldOblique',
-            'times': 'Times-Roman', 'timesB': 'Times-Bold',
-            'timesI': 'Times-Italic', 'timesBI': 'Times-BoldItalic',
-            'symbol': 'Symbol', 'zapfdingbats': 'ZapfDingbats'}
+
         self.core_fonts_encoding = "latin-1"
-        # Scale factor
-        if unit == "pt":
-            self.k = 1
-        elif unit == "mm":
-            self.k = 72 / 25.4
-        elif unit == "cm":
-            self.k = 72 / 2.54
-        elif unit == 'in':
-            self.k = 72.
-        else:
-            self.error("Incorrect unit: " + unit)
+
+        self.scale = self.get_units_scale(unit)
+
         # Page format
-        self.fw_pt, self.fh_pt = self.get_page_format(format, self.k)
-        self.dw_pt = self.fw_pt
-        self.dh_pt = self.fh_pt
-        self.fw = self.fw_pt / self.k
-        self.fh = self.fh_pt / self.k
-        # Page orientation
-        orientation = orientation.lower()
-        if orientation in ('p', 'portrait'):
-            self.def_orientation = 'P'
-            self.w_pt = self.fw_pt
-            self.h_pt = self.fh_pt
-        elif orientation in ('l', 'landscape'):
-            self.def_orientation = 'L'
-            self.w_pt = self.fh_pt
-            self.h_pt = self.fw_pt
-        else:
-            self.error('Incorrect orientation: ' + orientation)
+        self.file_width_points, self.file_height_points = get_page_dimensions(format, self.scale)  # in points
+        self.document_width_points = self.file_width_points
+        self.document_height_points = self.file_height_points
+        self.file_width_unit = self.file_width_points / self.scale
+        self.file_height_unit = self.file_height_points / self.scale
+
+        self.set_page_orientation(orientation)
+
         self.cur_orientation = self.def_orientation
-        self.w = self.w_pt / self.k
-        self.h = self.h_pt / self.k
+        self.w = self.width_points / self.scale
+        self.h = self.height_points / self.scale
         # Page margins (1 cm)
-        margin = 28.35 / self.k
+        margin = 28.35 / self.scale
         self.set_margins(margin, margin)
         # Interior cell margin (1 mm)
         self.c_margin = margin / 10.0
         # line width (0.2 mm)
-        self.line_width = .567 / self.k
+        self.line_width = .567 / self.scale
         # Automatic page break
         self.set_auto_page_break(1, 2 * margin)
         # Full width display mode
@@ -145,17 +148,35 @@ class FPDF(object):
         # Set default PDF version number
         self.pdf_version = '1.3'
 
-    @staticmethod
-    def get_page_format(format, k):
-        "Return scale factor, page w and h size in points"
-        if isinstance(format, basestring):
-            format = format.lower()
-            if format in PAGE_FORMATS:
-                return PAGE_FORMATS[format]
-            else:
-                raise RuntimeError("Unknown page format: " + format)
+    def set_page_orientation(self, orientation):
+        # Page orientation
+        orientation = orientation.lower()
+        if orientation in ('p', 'portrait'):
+            self.def_orientation = 'P'
+            self.width_points = self.file_width_points
+            self.height_points = self.file_height_points
+        elif orientation in ('l', 'landscape'):
+            self.def_orientation = 'L'
+            self.width_points = self.file_height_points
+            self.height_points = self.file_width_points
         else:
-            return (format[0] * k, format[1] * k)
+            raise ValueError(f"Invalid orientation option: {orientation}")
+
+    @staticmethod
+    def get_units_scale(unit):
+        """
+        Returns the scaling factor points (pixels) per unit
+        """
+        if unit == "pt":
+            return 1
+        elif unit == "mm":
+            return 72 / 25.4
+        elif unit == "cm":
+            return 72 / 2.54
+        elif unit == 'in':
+            return 72.
+        else:
+            raise ValueError(f"Unknown unit: {unit}")
 
     def check_page(fn):
         "Decorator to protect drawing methods"
@@ -298,7 +319,7 @@ class FPDF(object):
         self._out('2 J')
         #Set line width
         self.line_width=lw
-        self._out(sprintf('%.2f w',lw*self.k))
+        self._out(sprintf('%.2f w', lw * self.scale))
         #Set font
         if(family):
             self.set_font(family,style,size)
@@ -316,7 +337,7 @@ class FPDF(object):
         #Restore line width
         if(self.line_width!=lw):
             self.line_width=lw
-            self._out(sprintf('%.2f w',lw*self.k))
+            self._out(sprintf('%.2f w', lw * self.scale))
         #Restore font
         if(family):
             self.set_font(family,style,size)
@@ -359,7 +380,7 @@ class FPDF(object):
         if((r==0 and g==0 and b==0) or g==-1):
             self.fill_color=sprintf('%.3f g',r/255.0)
         else:
-            self.fill_color=sprintf('%.3f %.3f %.3f rg',r/255.0,g/255.0,b/255.0)
+            self.fill_color = sprintf('%.3f %.3f %.3f rg', r/255.0, g/255.0, b/255.0)
         self.color_flag=(self.fill_color!=self.text_color)
         if(self.page>0):
             self._out(self.fill_color)
@@ -401,16 +422,16 @@ class FPDF(object):
         "Set line width"
         self.line_width=width
         if(self.page>0):
-            self._out(sprintf('%.2f w',width*self.k))
+            self._out(sprintf('%.2f w', width * self.scale))
 
     @check_page
     def line(self, x1,y1,x2,y2):
         "Draw a line"
-        self._out(sprintf('%.2f %.2f m %.2f %.2f l S',x1*self.k,(self.h-y1)*self.k,x2*self.k,(self.h-y2)*self.k))
+        self._out(sprintf('%.2f %.2f m %.2f %.2f l S', x1 * self.scale, (self.h - y1) * self.scale, x2 * self.scale, (self.h - y2) * self.scale))
 
     def _set_dash(self, dash_length=False, space_length=False):
         if(dash_length and space_length):
-            s = sprintf('[%.3f %.3f] 0 d', dash_length*self.k, space_length*self.k)
+            s = sprintf('[%.3f %.3f] 0 d', dash_length * self.scale, space_length * self.scale)
         else:
             s = '[] 0 d'
         self._out(s)
@@ -433,7 +454,7 @@ class FPDF(object):
             op='B'
         else:
             op='S'
-        self._out(sprintf('%.2f %.2f %.2f %.2f re %s',x*self.k,(self.h-y)*self.k,w*self.k,-h*self.k,op))
+        self._out(sprintf('%.2f %.2f %.2f %.2f re %s', x * self.scale, (self.h - y) * self.scale, w * self.scale, -h * self.scale, op))
 
     @check_page
     def ellipse(self, x,y,w,h,style=''):
@@ -454,23 +475,23 @@ class FPDF(object):
         ly = 4.0/3.0*(math.sqrt(2)-1)*ry
 
         self._out(sprintf('%.2f %.2f m %.2f %.2f %.2f %.2f %.2f %.2f c',
-            (cx+rx)*self.k, (self.h-cy)*self.k,
-            (cx+rx)*self.k, (self.h-(cy-ly))*self.k,
-            (cx+lx)*self.k, (self.h-(cy-ry))*self.k,
-            cx*self.k, (self.h-(cy-ry))*self.k))
+                          (cx+rx) * self.scale, (self.h - cy) * self.scale,
+                          (cx+rx) * self.scale, (self.h - (cy - ly)) * self.scale,
+                          (cx+lx) * self.scale, (self.h - (cy - ry)) * self.scale,
+                          cx * self.scale, (self.h - (cy - ry)) * self.scale))
         self._out(sprintf('%.2f %.2f %.2f %.2f %.2f %.2f c',
-            (cx-lx)*self.k, (self.h-(cy-ry))*self.k,
-            (cx-rx)*self.k, (self.h-(cy-ly))*self.k,
-            (cx-rx)*self.k, (self.h-cy)*self.k))
+                          (cx-lx) * self.scale, (self.h - (cy - ry)) * self.scale,
+                          (cx-rx) * self.scale, (self.h - (cy - ly)) * self.scale,
+                          (cx-rx) * self.scale, (self.h - cy) * self.scale))
         self._out(sprintf('%.2f %.2f %.2f %.2f %.2f %.2f c',
-            (cx-rx)*self.k, (self.h-(cy+ly))*self.k,
-            (cx-lx)*self.k, (self.h-(cy+ry))*self.k,
-            cx*self.k, (self.h-(cy+ry))*self.k))
+                          (cx-rx) * self.scale, (self.h - (cy + ly)) * self.scale,
+                          (cx-lx) * self.scale, (self.h - (cy + ry)) * self.scale,
+                          cx * self.scale, (self.h - (cy + ry)) * self.scale))
         self._out(sprintf('%.2f %.2f %.2f %.2f %.2f %.2f c %s',
-            (cx+lx)*self.k, (self.h-(cy+ry))*self.k,
-            (cx+rx)*self.k, (self.h-(cy+ly))*self.k,
-            (cx+rx)*self.k, (self.h-cy)*self.k,
-            op))
+                          (cx+lx) * self.scale, (self.h - (cy + ry)) * self.scale,
+                          (cx+rx) * self.scale, (self.h - (cy + ly)) * self.scale,
+                          (cx+rx) * self.scale, (self.h - cy) * self.scale,
+                          op))
 
     def add_font(self, family, style='', fname='', uni=False):
         "Add a TrueType or Type1 font"
@@ -630,7 +651,7 @@ class FPDF(object):
         self.font_family=family
         self.font_style=style
         self.font_size_pt=size
-        self.font_size=size/self.k
+        self.font_size=size/self.scale
         self.current_font=self.fonts[fontkey]
         self.unifontsubset = (self.fonts[fontkey]['type'] == 'TTF')
         if(self.page>0):
@@ -641,7 +662,7 @@ class FPDF(object):
         if(self.font_size_pt==size):
             return
         self.font_size_pt=size
-        self.font_size=size/self.k
+        self.font_size=size/self.scale
         if(self.page>0):
             self._out(sprintf('BT /F%d %.2f Tf ET',self.current_font['i'],self.font_size_pt))
 
@@ -671,7 +692,7 @@ class FPDF(object):
         "Put a link on the page"
         if not self.page in self.page_links:
             self.page_links[self.page] = []
-        self.page_links[self.page] += [(x*self.k,self.h_pt-y*self.k,w*self.k,h*self.k,link),]
+        self.page_links[self.page] += [(x * self.scale, self.height_points - y * self.scale, w * self.scale, h * self.scale, link), ]
 
     @check_page
     def text(self, x, y, txt=''):
@@ -683,7 +704,7 @@ class FPDF(object):
                 self.current_font['subset'].append(uni)
         else:
             txt2 = self._escape(txt)
-        s=sprintf('BT %.2f %.2f Td (%s) Tj ET',x*self.k,(self.h-y)*self.k, txt2)
+        s=sprintf('BT %.2f %.2f Td (%s) Tj ET', x * self.scale, (self.h - y) * self.scale, txt2)
         if(self.underline and txt!=''):
             s+=' '+self._dounderline(x,y,txt)
         if(self.color_flag):
@@ -703,8 +724,8 @@ class FPDF(object):
             angle *= math.pi/180;
             c = math.cos(angle);
             s = math.sin(angle);
-            cx = x*self.k;
-            cy = (self.h-y)*self.k
+            cx = x*self.scale;
+            cy = (self.h-y)*self.scale
             s = sprintf('q %.5F %.5F %.5F %.5F %.2F %.2F cm 1 0 0 1 %.2F %.2F cm',c,s,-s,c,cx,cy,-cx,-cy)
             self._out(s)
 
@@ -716,7 +737,7 @@ class FPDF(object):
     def cell(self, w,h=0,txt='',border=0,ln=0,align='',fill=0,link=''):
         "Output a cell"
         txt = self.normalize_text(txt)
-        k=self.k
+        k=self.scale
         if(self.y+h>self.page_break_trigger and not self.in_footer and self.accept_page_break()):
             #Automatic page break
             x=self.x
@@ -775,7 +796,7 @@ class FPDF(object):
                     tx = '(' + self._escape(UTF8ToUTF16BE(tx, False)) + ')'
                     s += sprintf('%s ', tx);
                     if ((i+1)<numt):
-                        adj = -(self.ws * self.k) * 1000 / self.font_size_pt
+                        adj = -(self.ws * self.scale) * 1000 / self.font_size_pt
                         s += sprintf('%d(%s) ', adj, space)
                 s += '] TJ'
                 s += ' ET'
@@ -806,15 +827,15 @@ class FPDF(object):
             self.x+=w
 
     @check_page
-    def multi_cell(self, w, h, txt='', border=0, align='J', fill=0, split_only=False):
+    def multi_cell(self, width, height, text='', border=0, align='J', fill=0, split_only=False):
         "Output text with automatic or explicit line breaks"
-        txt = self.normalize_text(txt)
+        text = self.normalize_text(text)
         ret = [] # if split_only = True, returns splited text cells
-        cw=self.current_font['cw']
-        if(w==0):
-            w=self.w-self.r_margin-self.x
-        wmax=(w-2*self.c_margin)*1000.0/self.font_size
-        s=txt.replace("\r",'')
+        char_width = self.current_font['cw']
+        if(width==0):
+            width = self.w - self.r_margin - self.x
+        wmax= (width - 2 * self.c_margin) * 1000.0 / self.font_size
+        s=text.replace("\r", '')
         nb=len(s)
         if(nb>0 and s[nb-1]=="\n"):
             nb-=1
@@ -850,7 +871,7 @@ class FPDF(object):
                     if not split_only:
                         self._out('0 Tw')
                 if not split_only:
-                    self.cell(w,h,substr(s,j,i-j),b,2,align,fill)
+                    self.cell(width, height, substr(s, j, i - j), b, 2, align, fill)
                 else:
                     ret.append(substr(s,j,i-j))
                 i+=1
@@ -869,7 +890,7 @@ class FPDF(object):
             if self.unifontsubset:
                 l += self.get_string_width(c, True) / self.font_size*1000.0
             else:
-                l += cw.get(c,0)
+                l += char_width.get(c,0)
             if(l>wmax):
                 #Automatic line break
                 if(sep==-1):
@@ -880,7 +901,7 @@ class FPDF(object):
                         if not split_only:
                             self._out('0 Tw')
                     if not split_only:
-                        self.cell(w,h,substr(s,j,i-j),b,2,align,fill)
+                        self.cell(width, height, substr(s, j, i - j), b, 2, align, fill)
                     else:
                         ret.append(substr(s,j,i-j))
                 else:
@@ -890,9 +911,9 @@ class FPDF(object):
                         else:
                             self.ws=0
                         if not split_only:
-                            self._out(sprintf('%.3f Tw',self.ws*self.k))
+                            self._out(sprintf('%.3f Tw', self.ws * self.scale))
                     if not split_only:
-                        self.cell(w,h,substr(s,j,sep-j),b,2,align,fill)
+                        self.cell(width, height, substr(s, j, sep - j), b, 2, align, fill)
                     else:
                         ret.append(substr(s,j,sep-j))
                     i=sep+1
@@ -913,7 +934,7 @@ class FPDF(object):
         if(border and 'B' in border):
             b+='B'
         if not split_only:
-            self.cell(w,h,substr(s,j,i-j),b,2,align,fill)
+            self.cell(width, height, substr(s, j, i - j), b, 2, align, fill)
             self.x=self.l_margin
         else:
             ret.append(substr(s,j,i-j))
@@ -1038,8 +1059,8 @@ class FPDF(object):
         #Automatic width and height calculation if needed
         if(w==0 and h==0):
             #Put image at 72 dpi
-            w=info['w']/self.k
-            h=info['h']/self.k
+            w=info['w']/self.scale
+            h=info['h']/self.scale
         elif(w==0):
             w=h*info['w']/info['h']
         elif(h==0):
@@ -1056,7 +1077,7 @@ class FPDF(object):
         if x is None:
             x = self.x
         if not is_mask:
-            self._out(sprintf('q %.2f 0 0 %.2f %.2f %.2f cm /I%d Do Q',w*self.k,h*self.k,x*self.k,(self.h-(y+h))*self.k,info['i']))
+            self._out(sprintf('q %.2f 0 0 %.2f %.2f %.2f cm /I%d Do Q', w * self.scale, h * self.scale, x * self.scale, (self.h - (y + h)) * self.scale, info['i']))
         if(link):
             self.link(x,y,w,h,link)
 
@@ -1175,11 +1196,11 @@ class FPDF(object):
                     self.pages[n]["content"].replace(self.str_alias_nb_pages,
                         str(nb))
         if self.def_orientation == 'P':
-            dw_pt = self.dw_pt
-            dh_pt = self.dh_pt
+            dw_pt = self.document_width_points
+            dh_pt = self.document_height_points
         else:
-            dw_pt = self.dh_pt
-            dh_pt = self.dw_pt
+            dw_pt = self.document_height_points
+            dh_pt = self.document_width_points
         if self.compress:
             filter = '/Filter /FlateDecode '
         else:
@@ -1211,8 +1232,7 @@ class FPDF(object):
                             h = w_pt
                         else:
                             h = h_pt
-                        annots += sprintf('/Dest [%d 0 R /XYZ 0 %.2f null]>>',
-                            1 + 2 * l[0], h - l[1] * self.k)
+                        annots += sprintf('/Dest [%d 0 R /XYZ 0 %.2f null]>>', 1 + 2 * l[0], h - l[1] * self.scale)
                 self._out(annots + ']')
             if self.pdf_version > '1.3':
                 self._out("/Group <</Type /Group /S /Transparency"\
@@ -1728,31 +1748,31 @@ class FPDF(object):
             # Page format
             if format:
                 # Change page format
-                self.fw_pt, self.fh_pt = self.get_page_format(format, self.k)
+                self.file_width_points, self.file_height_points = get_page_dimensions(format, self.scale)
             else:
                 # Set to default format
-                self.fw_pt = self.dw_pt
-                self.fh_pt = self.dh_pt
-            self.fw = self.fw_pt / self.k
-            self.fh = self.fh_pt / self.k
+                self.file_width_points = self.document_width_points
+                self.file_height_points = self.document_height_points
+            self.file_width_unit = self.file_width_points / self.scale
+            self.file_height_unit = self.file_height_points / self.scale
             # Page orientation
             if not orientation:
                 orientation = self.def_orientation
             else:
                 orientation = orientation[0].upper()
             if orientation == 'P':
-                self.w_pt = self.fw_pt
-                self.h_pt = self.fh_pt
+                self.width_points = self.file_width_points
+                self.height_points = self.file_height_points
             else:
-                self.w_pt = self.fh_pt
-                self.h_pt = self.fw_pt
-            self.w = self.w_pt / self.k
-            self.h = self.h_pt / self.k
+                self.width_points = self.file_height_points
+                self.height_points = self.file_width_points
+            self.w = self.width_points / self.scale
+            self.h = self.height_points / self.scale
             self.cur_orientation = orientation
             self.page_break_trigger = self.h - self.b_margin
             self.cur_orientation = orientation
-        self.pages[self.page]["w_pt"] = self.w_pt
-        self.pages[self.page]["h_pt"] = self.h_pt
+        self.pages[self.page]["w_pt"] = self.width_points
+        self.pages[self.page]["h_pt"] = self.height_points
 
     def _endpage(self):
         #End of page contents
@@ -1769,7 +1789,7 @@ class FPDF(object):
         up=self.current_font['up']
         ut=self.current_font['ut']
         w=self.get_string_width(txt, True)+self.ws*txt.count(' ')
-        return sprintf('%.2f %.2f %.2f %.2f re f',x*self.k,(self.h-(y-up/1000.0*self.font_size))*self.k,w*self.k,-ut/1000.0*self.font_size_pt)
+        return sprintf('%.2f %.2f %.2f %.2f re f', x * self.scale, (self.h - (y - up / 1000.0 * self.font_size)) * self.scale, w * self.scale, -ut / 1000.0 * self.font_size_pt)
 
     def load_resource(self, reason, filename):
         "Load external file"

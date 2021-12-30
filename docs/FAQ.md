@@ -56,8 +56,10 @@ the simplified import and usage:
 (<http://www.web2py.com/book/default/chapter/09?search=pdf#ReportLab-and-PDF>)
 
 PyFPDF:
+
 ```python
 from fpdf import FPDF
+
 
 def get_me_a_pyfpdf():
     title = "This The Doc Title"
@@ -71,7 +73,7 @@ def get_me_a_pyfpdf():
     pdf.set_font('Times', 'B', 15)
     pdf.cell(w=0, h=6, txt=heading, border=0, ln=1, align='L', fill=0)
     pdf.set_font('Times', '', 12)
-    pdf.multi_cell(w=0, h=5, txt=text)
+    pdf.multi_cell(width=0, height=5, text=text)
     response.headers['Content-Type'] = 'application/pdf'
     return pdf.output(dest='S')
 ```

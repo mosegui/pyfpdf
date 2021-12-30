@@ -114,9 +114,9 @@ class Template:
             text = text.encode("latin1","ignore")
         else:
             text = str(text)
-        return pdf.multi_cell(w=element['x2']-element['x1'],
-                             h=element['y2']-element['y1'],
-                             txt=text,align=align,split_only=True)
+        return pdf.multi_cell(width=element['x2'] - element['x1'],
+                              height=element['y2'] - element['y1'],
+                              text=text, align=align, split_only=True)
         
     def render(self, outfile, dest="F"):
         pdf = self.pdf
@@ -169,11 +169,11 @@ class Template:
                 pdf.cell(w=x2-x1,h=y2-y1,txt=text,border=0,ln=0,align=align)
             elif multiline:
                 # multiline==True: automatic word - warp
-                pdf.multi_cell(w=x2-x1,h=y2-y1,txt=text,border=0,align=align)
+                pdf.multi_cell(width=x2 - x1, height=y2 - y1, text=text, border=0, align=align)
             else:
                 # multiline==False: trim to fit exactly the space defined
-                text = pdf.multi_cell(w=x2-x1, h=y2-y1,
-                             txt=text, align=align, split_only=True)[0]
+                text = pdf.multi_cell(width=x2 - x1, height=y2 - y1,
+                                      text=text, align=align, split_only=True)[0]
                 print("trimming: *%s*" % text)
                 pdf.cell(w=x2-x1,h=y2-y1,txt=text,border=0,ln=0,align=align)
 
