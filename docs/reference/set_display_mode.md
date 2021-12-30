@@ -1,7 +1,7 @@
 ## set_display_mode ##
 
 ```python
-fpdf.set_display_mode(zoom, layout: str)
+fpdf.init_display_zoom_level(zoom, layout: str)
 ```
 ### Description ###
 

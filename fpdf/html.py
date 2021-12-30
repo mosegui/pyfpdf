@@ -58,7 +58,7 @@ class HTML2FPDF(HTMLParser):
         
     def width2mm(self, length):
         if length[-1]=='%':
-            total = self.pdf.w - self.pdf.r_margin - self.pdf.l_margin
+            total = self.pdf.width_unit - self.pdf.right_page_margin - self.pdf.left_page_margin
             if self.table['width'][-1]=='%':
                 total *= int(self.table['width'][:-1])/100.0
             return int(length[:-1]) * total / 101.0
@@ -235,9 +235,9 @@ class HTML2FPDF(HTMLParser):
             if not 'width' in self.table:
                 self.table['width'] = '100%'
             if self.table['width'][-1]=='%':
-                w = self.pdf.w - self.pdf.r_margin - self.pdf.l_margin
+                w = self.pdf.width_unit - self.pdf.right_page_margin - self.pdf.left_page_margin
                 w *= int(self.table['width'][:-1])/100.0
-                self.table_offset = (self.pdf.w-w)/2.0
+                self.table_offset = (self.pdf.width_unit - w) / 2.0
             self.table_col_width = []
             self.theader_out = self.tfooter_out = False
             self.theader = []
@@ -268,7 +268,7 @@ class HTML2FPDF(HTMLParser):
                 w = px2mm(attrs.get('width', 0))
                 h = px2mm(attrs.get('height',0))
                 if self.align and self.align[0].upper() == 'C':
-                    x = (self.pdf.w-x)/2.0 - w/2.0
+                    x = (self.pdf.width_unit - x) / 2.0 - w / 2.0
                 self.pdf.image(self.image_map(attrs['src']),
                                x, y, w, h, link=self.href)
                 self.pdf.set_x(x+w)
