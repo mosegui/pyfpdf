@@ -1,3 +1,6 @@
+
+**THIS IS A REPO FORK FROM reingart/pypdf WITH THE AIM OF (FIRST) REFACTORING AND CLEANING UP THE CODE BASE**
+
 pyfpdf: FPDF for Python
 =======================
 
