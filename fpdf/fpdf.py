@@ -23,7 +23,7 @@ import os, sys, zlib, re, tempfile, struct
 
 from .ttfonts import TTFontFile
 from .fonts import fpdf_charwidths
-from .php import substr, sprintf, print_r, UTF8ToUTF16BE, UTF8StringToArray
+from .php import substr, sprintf, UTF8ToUTF16BE, UTF8StringToArray
 from .py3k import PY3K, pickle, urlopen, BytesIO, Image, basestring, unicode, exception, b, hashpath
 
 from .helpers import get_page_dimensions
@@ -51,6 +51,11 @@ def load_cache(filename):
             return pickle.load(fh)
     except (IOError, ValueError):  # File missing, unsupported pickle, etc
         return None
+
+
+class CatchAllError(Exception):
+    # Is here to replace a deprecated raise CatchAllError method. Adjust instances to best types of error
+    pass
 
 
 class FPDF:
@@ -97,7 +102,7 @@ class FPDF:
         @wraps(fn)
         def wrapper(self, *args, **kwargs):
             if not self.page and not kwargs.get('split_only'):
-                self.error("No page open, you need to call add_page() first")
+                raise CatchAllError("No page open, you need to call add_page() first")
             else:
                 return fn(self, *args, **kwargs)
 
@@ -142,16 +147,12 @@ class FPDF:
         if opt == "core_fonts_encoding":
             self.settings.core_fonts_encoding = value
         else:
-            self.error("Unknown document option \"%s\"" % str(opt))
+            raise CatchAllError("Unknown document option \"%s\"" % str(opt))
 
     def alias_nb_pages(self, alias='{nb}'):
         """Define an alias for total number of pages"""
         self.str_alias_nb_pages = alias
         return alias
-
-    def error(self, msg):
-        """Fatal error"""
-        raise RuntimeError('FPDF error: ' + msg)
 
     def open(self):
         """Begin document"""
@@ -524,11 +525,11 @@ class FPDF:
                     with open(name + '.font') as file:
                         exec(compile(file.read(), name + '.font', 'exec'))
                     if fontkey not in fpdf_charwidths:
-                        self.error('Could not include font metric file for' + fontkey)
+                        raise CatchAllError('Could not include font metric file for' + fontkey)
                 i = len(self.fonts) + 1
                 self.fonts[fontkey] = {'i': i, 'type': 'core', 'name': self.core_fonts[fontkey], 'up': -100, 'ut': 50, 'cw': fpdf_charwidths[fontkey]}
             else:
-                self.error('Undefined font: ' + family + ' ' + style)
+                raise CatchAllError('Undefined font: ' + family + ' ' + style)
         # Select it
         self.settings.font_family = family
         self.settings.font_style = style
@@ -894,7 +895,7 @@ class FPDF:
             if type == '':
                 pos = name.rfind('.')
                 if not pos:
-                    self.error('image file has no extension and no type was specified: ' + name)
+                    raise CatchAllError('image file has no extension and no type was specified: ' + name)
                 type = substr(name, pos + 1)
             type = type.lower()
             if type == 'jpg' or type == 'jpeg':
@@ -919,16 +920,16 @@ class FPDF:
                 if not succeed_parsing:
                     mtd = '_parse' + type
                     if not hasattr(self, mtd):
-                        self.error('Unsupported image type: ' + type)
+                        raise CatchAllError('Unsupported image type: ' + type)
                     info = getattr(self, mtd)(name)
                 mtd = '_parse' + type
                 if not hasattr(self, mtd):
-                    self.error('Unsupported image type: ' + type)
+                    raise CatchAllError('Unsupported image type: ' + type)
                 info = getattr(self, mtd)(name)
             info['i'] = len(self.images) + 1
             # is_mask and mask_image
             if is_mask and info['cs'] != 'DeviceGray':
-                self.error('Mask must be a gray scale image')
+                raise CatchAllError('Mask must be a gray scale image')
             if mask_image:
                 info['masked'] = mask_image
             self.images[name] = info
@@ -1033,7 +1034,7 @@ class FPDF:
             # Return as a byte string
             return buffer
         else:
-            self.error('Incorrect output destination: ' + dest)
+            raise CatchAllError('Incorrect output destination: ' + dest)
 
     def normalize_text(self, txt):
         """Check that text input is in the correct format/encoding"""
@@ -1052,7 +1053,7 @@ class FPDF:
     def _dochecks(self):
         # Check for locale-related bug
         #        if(1.1==1):
-        #            self.error("Don\'t alter the locale before including class file");
+        #            raise CatchAllError("Don\'t alter the locale before including class file");
         # Check for decimal separator
         if sprintf('%.1f', 1.0) != '1.0':
             import locale
@@ -1345,7 +1346,7 @@ class FPDF:
                 # Allow for additional types
                 mtd = '_put' + type.lower()
                 if not method_exists(self, mtd):
-                    self.error('Unsupported font type: ' + type)
+                    raise CatchAllError('Unsupported font type: ' + type)
                 self.mtd(font)
 
     def _putTTfontwidths(self, font, maxUni):
@@ -1672,7 +1673,7 @@ class FPDF:
                 f = open(filename, "rb")
             return f
         else:
-            self.error("Unknown resource loading reason \"%s\"" % reason)
+            raise CatchAllError("Unknown resource loading reason \"%s\"" % reason)
 
     def _parsejpg(self, filename):
         # Extract info from a JPEG file
@@ -1702,7 +1703,7 @@ class FPDF:
         except Exception:
             if f:
                 f.close()
-            self.error('Missing or incorrect image file: %s. error: %s' % (filename, str(exception())))
+            raise CatchAllError('Missing or incorrect image file: %s. error: %s' % (filename, str(exception())))
 
         with f:
             # Read whole file from the start
@@ -1713,11 +1714,11 @@ class FPDF:
     def _parsegif(self, filename):
         # Extract info from a GIF file (via PNG conversion)
         if Image is None:
-            self.error('PIL is required for GIF support')
+            raise CatchAllError('PIL is required for GIF support')
         try:
             im = Image.open(filename)
         except:
-            self.error('Missing or incorrect image file: %s. error: %s' % (filename, str(exception())))
+            raise CatchAllError('Missing or incorrect image file: %s. error: %s' % (filename, str(exception())))
         else:
             # Use temporary file
             with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as \
@@ -1739,17 +1740,17 @@ class FPDF:
         signature = '\x89' + 'PNG' + '\r' + '\n' + '\x1a' + '\n'
         if not PY3K: signature = signature.decode("latin1")
         if magic != signature:
-            self.error('Not a PNG file: ' + filename)
+            raise CatchAllError('Not a PNG file: ' + filename)
         # Read header chunk
         f.read(4)
         chunk = f.read(4).decode("latin1")
         if chunk != 'IHDR':
-            self.error('Incorrect PNG file: ' + filename)
+            raise CatchAllError('Incorrect PNG file: ' + filename)
         w = self._freadint(f)
         h = self._freadint(f)
         bpc = ord(f.read(1))
         if (bpc > 8):
-            self.error('16-bit depth not supported: ' + filename)
+            raise CatchAllError('16-bit depth not supported: ' + filename)
         ct = ord(f.read(1))
         if ct == 0 or ct == 4:
             colspace = 'DeviceGray'
@@ -1758,13 +1759,13 @@ class FPDF:
         elif ct == 3:
             colspace = 'Indexed'
         else:
-            self.error('Unknown color type: ' + filename)
+            raise CatchAllError('Unknown color type: ' + filename)
         if ord(f.read(1)) != 0:
-            self.error('Unknown compression method: ' + filename)
+            raise CatchAllError('Unknown compression method: ' + filename)
         if ord(f.read(1)) != 0:
-            self.error('Unknown filter method: ' + filename)
+            raise CatchAllError('Unknown filter method: ' + filename)
         if ord(f.read(1)) != 0:
-            self.error('Interlacing not supported: ' + filename)
+            raise CatchAllError('Interlacing not supported: ' + filename)
         f.read(4)
         dp = '/Predictor 15 /Colors '
         if colspace == 'DeviceRGB':
@@ -1805,7 +1806,7 @@ class FPDF:
             else:
                 f.read(n + 4)
         if colspace == 'Indexed' and not pal:
-            self.error('Missing palette in ' + filename)
+            raise CatchAllError('Missing palette in ' + filename)
         f.close()
         info = {'w': w, 'h': h, 'cs': colspace, 'bpc': bpc, 'f': 'FlateDecode', 'dp': dp, 'pal': pal, 'trns': trns, }
         if ct >= 4:
