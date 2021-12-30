@@ -51,39 +51,8 @@ def load_cache(filename):
         return None
 
 
-class FPDF(object):
-    pdf_version = "1.3"
-
-    core_fonts = {
-        'courier': 'Courier', 'courierB': 'Courier-Bold',
-        'courierI': 'Courier-Oblique', 'courierBI': 'Courier-BoldOblique',
-        'helvetica': 'Helvetica', 'helveticaB': 'Helvetica-Bold',
-        'helveticaI': 'Helvetica-Oblique',
-        'helveticaBI': 'Helvetica-BoldOblique',
-        'times': 'Times-Roman', 'timesB': 'Times-Bold',
-        'timesI': 'Times-Italic', 'timesBI': 'Times-BoldItalic',
-        'symbol': 'Symbol', 'zapfdingbats': 'ZapfDingbats'
-    }
-
+class PDFSettings:
     def __init__(self, orientation='P', unit='mm', format='A4'):
-        # Some checks
-        self._dochecks()
-        # Initialization of properties
-        self.offsets = {}  # array of object offsets
-        self.page = 0  # current page number
-        self.n = 2  # current object number
-        self.buffer = ''  # buffer holding in-memory PDF
-        self.pages = {}  # array containing pages and metadata
-        self.state = 0  # current document state
-        self.fonts = {}  # array of used fonts
-        self.font_files = {}  # array of font files
-        self.diffs = {}  # array of encoding differences
-        self.images = {}  # array of used images
-        self.page_links = {}  # array of links in pages
-        self.links = {}  # array of internal links
-        self.in_footer = 0  # flag set when processing footer
-        self.lastw = 0
-        self.lasth = 0  # height of last cell printed
         self.font_family = ''  # current font family
         self.font_style = ''  # current font style
         self.font_size_pt = 12  # current font size in points
@@ -93,7 +62,7 @@ class FPDF(object):
         self.fill_color = '0 g'
         self.text_color = '0 g'
         self.color_flag = 0  # indicates whether fill and text colors are different
-        self.ws = 0  # word spacing
+        self.word_spacing = 0  # word spacing
         self.angle = 0
 
         self.core_fonts_encoding = "latin-1"
@@ -126,11 +95,31 @@ class FPDF(object):
         # Enable compression
         self.compress = True
 
-    def init_line_width(self):
-        return .567 / self.scale
+    @staticmethod
+    def get_units_scale(unit):
+        """
+        Returns the scaling factor points (pixels) per unit
+        """
+        if unit == "pt":
+            return 1
+        elif unit == "mm":
+            return 72 / 25.4
+        elif unit == "cm":
+            return 72 / 2.54
+        elif unit == 'in':
+            return 72.
+        else:
+            raise ValueError(f"Unknown unit: {unit}")
 
-    def init_cell_margin(self):
-        return 2.835 / self.scale
+    def set_page_orientation(self, orientation):
+        # Page orientation
+        orientation = orientation.lower()
+        if orientation in ('p', 'portrait'):
+            return "P", self.file_width_points, self.file_height_points
+        elif orientation in ('l', 'landscape'):
+            return "L", self.file_height_points, self.file_width_points
+        else:
+            raise ValueError(f"Invalid orientation option: {orientation}")
 
     def init_page_margins(self, left_margin=None, top_margin=None, right_margin=None):
 
@@ -147,31 +136,48 @@ class FPDF(object):
 
         return left_margin, top_margin, right_margin, bottom_margin
 
-    def set_page_orientation(self, orientation):
-        # Page orientation
-        orientation = orientation.lower()
-        if orientation in ('p', 'portrait'):
-            return "P", self.file_width_points, self.file_height_points
-        elif orientation in ('l', 'landscape'):
-            return "L", self.file_height_points, self.file_width_points
-        else:
-            raise ValueError(f"Invalid orientation option: {orientation}")
+    def init_line_width(self):
+        return .567 / self.scale
 
-    @staticmethod
-    def get_units_scale(unit):
-        """
-        Returns the scaling factor points (pixels) per unit
-        """
-        if unit == "pt":
-            return 1
-        elif unit == "mm":
-            return 72 / 25.4
-        elif unit == "cm":
-            return 72 / 2.54
-        elif unit == 'in':
-            return 72.
-        else:
-            raise ValueError(f"Unknown unit: {unit}")
+    def init_cell_margin(self):
+        return 2.835 / self.scale
+
+
+class FPDF:
+    pdf_version = "1.3"
+
+    core_fonts = {
+        'courier': 'Courier', 'courierB': 'Courier-Bold',
+        'courierI': 'Courier-Oblique', 'courierBI': 'Courier-BoldOblique',
+        'helvetica': 'Helvetica', 'helveticaB': 'Helvetica-Bold',
+        'helveticaI': 'Helvetica-Oblique',
+        'helveticaBI': 'Helvetica-BoldOblique',
+        'times': 'Times-Roman', 'timesB': 'Times-Bold',
+        'timesI': 'Times-Italic', 'timesBI': 'Times-BoldItalic',
+        'symbol': 'Symbol', 'zapfdingbats': 'ZapfDingbats'
+    }
+
+    def __init__(self, orientation='P', unit='mm', format='A4'):
+        # Some checks
+        self._dochecks()
+        # Initialization of properties
+        self.offsets = {}  # array of object offsets
+        self.page = 0  # current page number
+        self.n = 2  # current object number
+        self.buffer = ''  # buffer holding in-memory PDF
+        self.pages = {}  # array containing pages and metadata
+        self.state = 0  # current document state
+        self.fonts = {}  # array of used fonts
+        self.font_files = {}  # array of font files
+        self.diffs = {}  # array of encoding differences
+        self.images = {}  # array of used images
+        self.page_links = {}  # array of links in pages
+        self.links = {}  # array of internal links
+        self.in_footer = 0  # flag set when processing footer
+
+        self.lasth = 0  # height of last cell printed
+
+        self.settings = PDFSettings(orientation=orientation, unit=unit, format=format)
 
     def check_page(fn):
         """
@@ -189,17 +195,17 @@ class FPDF(object):
 
     def set_left_margin(self, margin):
         """Set left margin"""
-        self.left_page_margin = margin
+        self.settings.left_page_margin = margin
         if self.page > 0 and self.x < margin:
             self.x = margin
 
     def set_top_margin(self, margin):
         """Set top margin"""
-        self.top_page_margin = margin
+        self.settings.top_page_margin = margin
 
     def set_right_margin(self, margin):
         """Set right margin"""
-        self.right_page_margin = margin
+        self.settings.right_page_margin = margin
 
     def set_title(self, title):
         """Title of document"""
@@ -224,7 +230,7 @@ class FPDF(object):
     def set_doc_option(self, opt, value):
         """Set document option"""
         if opt == "core_fonts_encoding":
-            self.core_fonts_encoding = value
+            self.settings.core_fonts_encoding = value
         else:
             self.error("Unknown document option \"%s\"" % str(opt))
 
@@ -260,18 +266,18 @@ class FPDF(object):
         """Start a new page, if same page format will be same as previous"""
         if self.state == 0:
             self.open()
-        family = self.font_family
-        if self.underline:
-            style = self.font_style + 'U'
+        family = self.settings.font_family
+        if self.settings.underline:
+            style = self.settings.font_style + 'U'
         else:
-            style = self.font_style
-        size = self.font_size_pt
-        lw = self.line_width
-        dc = self.draw_color
-        fc = self.fill_color
-        tc = self.text_color
-        cf = self.color_flag
-        stretching = self.font_stretching
+            style = self.settings.font_style
+        size = self.settings.font_size_pt
+        lw = self.settings.line_width
+        dc = self.settings.draw_color
+        fc = self.settings.fill_color
+        tc = self.settings.text_color
+        cf = self.settings.color_flag
+        stretching = self.settings.font_stretching
         if self.page > 0:
             # Page footer
             self.in_footer = 1
@@ -284,38 +290,38 @@ class FPDF(object):
         # Set line cap style to square
         self._out('2 J')
         # Set line width
-        self.line_width = lw
-        self._out(sprintf('%.2f w', lw * self.scale))
+        self.settings.line_width = lw
+        self._out(sprintf('%.2f w', lw * self.settings.scale))
         # Set font
         if family:
             self.set_font(family, style, size)
         # Set colors
-        self.draw_color = dc
+        self.settings.draw_color = dc
         if dc != '0 G':
             self._out(dc)
-        self.fill_color = fc
+        self.settings.fill_color = fc
         if fc != '0 g':
             self._out(fc)
-        self.text_color = tc
-        self.color_flag = cf
+        self.settings.text_color = tc
+        self.settings.color_flag = cf
         # Page header
         self.header()
         # Restore line width
-        if self.line_width != lw:
-            self.line_width = lw
-            self._out(sprintf('%.2f w', lw * self.scale))
+        if self.settings.line_width != lw:
+            self.settings.line_width = lw
+            self._out(sprintf('%.2f w', lw * self.settings.scale))
         # Restore font
         if family:
             self.set_font(family, style, size)
         # Restore colors
-        if self.draw_color != dc:
-            self.draw_color = dc
+        if self.settings.draw_color != dc:
+            self.settings.draw_color = dc
             self._out(dc)
-        if self.fill_color != fc:
-            self.fill_color = fc
+        if self.settings.fill_color != fc:
+            self.settings.fill_color = fc
             self._out(fc)
-        self.text_color = tc
-        self.color_flag = cf
+        self.settings.text_color = tc
+        self.settings.color_flag = cf
         # Restore stretching
         if stretching != 100:
             self.set_stretching(stretching)
@@ -335,29 +341,29 @@ class FPDF(object):
     def set_draw_color(self, r, g=-1, b=-1):
         """Set color for all stroking operations"""
         if (r == 0 and g == 0 and b == 0) or g == -1:
-            self.draw_color = sprintf('%.3f G', r / 255.0)
+            self.settings.draw_color = sprintf('%.3f G', r / 255.0)
         else:
-            self.draw_color = sprintf('%.3f %.3f %.3f RG', r / 255.0, g / 255.0, b / 255.0)
+            self.settings.draw_color = sprintf('%.3f %.3f %.3f RG', r / 255.0, g / 255.0, b / 255.0)
         if (self.page > 0):
-            self._out(self.draw_color)
+            self._out(self.settings.draw_color)
 
     def set_fill_color(self, r, g=-1, b=-1):
         """Set color for all filling operations"""
         if (r == 0 and g == 0 and b == 0) or g == -1:
-            self.fill_color = sprintf('%.3f g', r / 255.0)
+            self.settings.fill_color = sprintf('%.3f g', r / 255.0)
         else:
-            self.fill_color = sprintf('%.3f %.3f %.3f rg', r / 255.0, g / 255.0, b / 255.0)
-        self.color_flag = (self.fill_color != self.text_color)
+            self.settings.fill_color = sprintf('%.3f %.3f %.3f rg', r / 255.0, g / 255.0, b / 255.0)
+        self.settings.color_flag = (self.settings.fill_color != self.settings.text_color)
         if (self.page > 0):
-            self._out(self.fill_color)
+            self._out(self.settings.fill_color)
 
     def set_text_color(self, r, g=-1, b=-1):
         """Set color for text"""
         if (r == 0 and g == 0 and b == 0) or g == -1:
-            self.text_color = sprintf('%.3f g', r / 255.0)
+            self.settings.text_color = sprintf('%.3f g', r / 255.0)
         else:
-            self.text_color = sprintf('%.3f %.3f %.3f rg', r / 255.0, g / 255.0, b / 255.0)
-        self.color_flag = (self.fill_color != self.text_color)
+            self.settings.text_color = sprintf('%.3f %.3f %.3f rg', r / 255.0, g / 255.0, b / 255.0)
+        self.settings.color_flag = (self.settings.fill_color != self.settings.text_color)
 
     def get_string_width(self, s, normalized=False):
         """Get width of a string in the current font"""
@@ -380,25 +386,25 @@ class FPDF(object):
         else:
             for i in range(0, l):
                 w += cw.get(s[i], 0)
-        if self.font_stretching != 100:
-            w = w * self.font_stretching / 100.0
+        if self.settings.font_stretching != 100:
+            w = w * self.settings.font_stretching / 100.0
         return w * self.font_size / 1000.0
 
     def set_line_width(self, width):
         """Set line width"""
-        self.line_width = width
+        self.settings.line_width = width
         if self.page > 0:
-            self._out(sprintf('%.2f w', width * self.scale))
+            self._out(sprintf('%.2f w', width * self.settings.scale))
 
     @check_page
     def line(self, x1, y1, x2, y2):
         """Draw a line"""
         self._out(
-            sprintf('%.2f %.2f m %.2f %.2f l S', x1 * self.scale, (self.height_unit - y1) * self.scale, x2 * self.scale, (self.height_unit - y2) * self.scale))
+            sprintf('%.2f %.2f m %.2f %.2f l S', x1 * self.settings.scale, (self.settings.height_unit - y1) * self.settings.scale, x2 * self.settings.scale, (self.settings.height_unit - y2) * self.settings.scale))
 
     def _set_dash(self, dash_length=False, space_length=False):
         if dash_length and space_length:
-            s = sprintf('[%.3f %.3f] 0 d', dash_length * self.scale, space_length * self.scale)
+            s = sprintf('[%.3f %.3f] 0 d', dash_length * self.settings.scale, space_length * self.settings.scale)
         else:
             s = '[] 0 d'
         self._out(s)
@@ -421,7 +427,7 @@ class FPDF(object):
             op = 'B'
         else:
             op = 'S'
-        self._out(sprintf('%.2f %.2f %.2f %.2f re %s', x * self.scale, (self.height_unit - y) * self.scale, w * self.scale, -h * self.scale, op))
+        self._out(sprintf('%.2f %.2f %.2f %.2f re %s', x * self.settings.scale, (self.settings.height_unit - y) * self.settings.scale, w * self.settings.scale, -h * self.settings.scale, op))
 
     @check_page
     def ellipse(self, x, y, w, h, style=''):
@@ -442,22 +448,22 @@ class FPDF(object):
         ly = 4.0 / 3.0 * (math.sqrt(2) - 1) * ry
 
         self._out(sprintf('%.2f %.2f m %.2f %.2f %.2f %.2f %.2f %.2f c',
-                          (cx + rx) * self.scale, (self.height_unit - cy) * self.scale,
-                          (cx + rx) * self.scale, (self.height_unit - (cy - ly)) * self.scale,
-                          (cx + lx) * self.scale, (self.height_unit - (cy - ry)) * self.scale,
-                          cx * self.scale, (self.height_unit - (cy - ry)) * self.scale))
+                          (cx + rx) * self.settings.scale, (self.settings.height_unit - cy) * self.settings.scale,
+                          (cx + rx) * self.settings.scale, (self.settings.height_unit - (cy - ly)) * self.settings.scale,
+                          (cx + lx) * self.settings.scale, (self.settings.height_unit - (cy - ry)) * self.settings.scale,
+                          cx * self.settings.scale, (self.settings.height_unit - (cy - ry)) * self.settings.scale))
         self._out(sprintf('%.2f %.2f %.2f %.2f %.2f %.2f c',
-                          (cx - lx) * self.scale, (self.height_unit - (cy - ry)) * self.scale,
-                          (cx - rx) * self.scale, (self.height_unit - (cy - ly)) * self.scale,
-                          (cx - rx) * self.scale, (self.height_unit - cy) * self.scale))
+                          (cx - lx) * self.settings.scale, (self.settings.height_unit - (cy - ry)) * self.settings.scale,
+                          (cx - rx) * self.settings.scale, (self.settings.height_unit - (cy - ly)) * self.settings.scale,
+                          (cx - rx) * self.settings.scale, (self.settings.height_unit - cy) * self.settings.scale))
         self._out(sprintf('%.2f %.2f %.2f %.2f %.2f %.2f c',
-                          (cx - rx) * self.scale, (self.height_unit - (cy + ly)) * self.scale,
-                          (cx - lx) * self.scale, (self.height_unit - (cy + ry)) * self.scale,
-                          cx * self.scale, (self.height_unit - (cy + ry)) * self.scale))
+                          (cx - rx) * self.settings.scale, (self.settings.height_unit - (cy + ly)) * self.settings.scale,
+                          (cx - lx) * self.settings.scale, (self.settings.height_unit - (cy + ry)) * self.settings.scale,
+                          cx * self.settings.scale, (self.settings.height_unit - (cy + ry)) * self.settings.scale))
         self._out(sprintf('%.2f %.2f %.2f %.2f %.2f %.2f c %s',
-                          (cx + lx) * self.scale, (self.height_unit - (cy + ry)) * self.scale,
-                          (cx + rx) * self.scale, (self.height_unit - (cy + ly)) * self.scale,
-                          (cx + rx) * self.scale, (self.height_unit - cy) * self.scale,
+                          (cx + lx) * self.settings.scale, (self.settings.height_unit - (cy + ry)) * self.settings.scale,
+                          (cx + rx) * self.settings.scale, (self.settings.height_unit - (cy + ly)) * self.settings.scale,
+                          (cx + rx) * self.settings.scale, (self.settings.height_unit - cy) * self.settings.scale,
                           op))
 
     def add_font(self, family, style='', fname='', uni=False):
@@ -577,23 +583,23 @@ class FPDF(object):
         """Select a font; size given in points"""
         family = family.lower()
         if family == '':
-            family = self.font_family
+            family = self.settings.font_family
         if family == 'arial':
             family = 'helvetica'
         elif family == 'symbol' or family == 'zapfdingbats':
             style = ''
         style = style.upper()
         if 'U' in style:
-            self.underline = 1
+            self.settings.underline = 1
             style = style.replace('U', '')
         else:
-            self.underline = 0
+            self.settings.underline = 0
         if style == 'IB':
             style = 'BI'
         if size == 0:
-            size = self.font_size_pt
+            size = self.settings.font_size_pt
         # Test if font is already selected
-        if self.font_family == family and self.font_style == style and self.font_size_pt == size:
+        if self.settings.font_family == family and self.settings.font_style == style and self.settings.font_size_pt == size:
             return
         # Test if used for the first time
         fontkey = family + style
@@ -614,31 +620,31 @@ class FPDF(object):
             else:
                 self.error('Undefined font: ' + family + ' ' + style)
         # Select it
-        self.font_family = family
-        self.font_style = style
-        self.font_size_pt = size
-        self.font_size = size / self.scale
+        self.settings.font_family = family
+        self.settings.font_style = style
+        self.settings.font_size_pt = size
+        self.font_size = size / self.settings.scale
         self.current_font = self.fonts[fontkey]
         self.unifontsubset = (self.fonts[fontkey]['type'] == 'TTF')
         if self.page > 0:
-            self._out(sprintf('BT /F%d %.2f Tf ET', self.current_font['i'], self.font_size_pt))
+            self._out(sprintf('BT /F%d %.2f Tf ET', self.current_font['i'], self.settings.font_size_pt))
 
     def set_font_size(self, size):
         """Set font size in points"""
-        if (self.font_size_pt == size):
+        if (self.settings.font_size_pt == size):
             return
-        self.font_size_pt = size
-        self.font_size = size / self.scale
+        self.settings.font_size_pt = size
+        self.font_size = size / self.settings.scale
         if self.page > 0:
-            self._out(sprintf('BT /F%d %.2f Tf ET', self.current_font['i'], self.font_size_pt))
+            self._out(sprintf('BT /F%d %.2f Tf ET', self.current_font['i'], self.settings.font_size_pt))
 
     def set_stretching(self, factor):
         """Set from stretch factor percents (default: 100.0)"""
-        if self.font_stretching == factor:
+        if self.settings.font_stretching == factor:
             return
-        self.font_stretching = factor
+        self.settings.font_stretching = factor
         if self.page > 0:
-            self._out(sprintf('BT %.2f Tz ET', self.font_stretching))
+            self._out(sprintf('BT %.2f Tz ET', self.settings.font_stretching))
 
     def add_link(self):
         """Create a new internal link"""
@@ -658,7 +664,7 @@ class FPDF(object):
         """Put a link on the page"""
         if not self.page in self.page_links:
             self.page_links[self.page] = []
-        self.page_links[self.page] += [(x * self.scale, self.height_points - y * self.scale, w * self.scale, h * self.scale, link), ]
+        self.page_links[self.page] += [(x * self.settings.scale, self.height_points - y * self.settings.scale, w * self.settings.scale, h * self.settings.scale, link), ]
 
     @check_page
     def text(self, x, y, txt=''):
@@ -670,11 +676,11 @@ class FPDF(object):
                 self.current_font['subset'].append(uni)
         else:
             txt2 = self._escape(txt)
-        s = sprintf('BT %.2f %.2f Td (%s) Tj ET', x * self.scale, (self.height_unit - y) * self.scale, txt2)
-        if self.underline and txt != '':
+        s = sprintf('BT %.2f %.2f Td (%s) Tj ET', x * self.settings.scale, (self.settings.height_unit - y) * self.settings.scale, txt2)
+        if self.settings.underline and txt != '':
             s += ' ' + self._dounderline(x, y, txt)
-        if self.color_flag:
-            s = 'q ' + self.text_color + ' ' + s + ' Q'
+        if self.settings.color_flag:
+            s = 'q ' + self.settings.text_color + ' ' + s + ' Q'
         self._out(s)
 
     @check_page
@@ -683,15 +689,15 @@ class FPDF(object):
             x = self.x
         if y is None:
             y = self.y;
-        if self.angle != 0:
+        if self.settings.angle != 0:
             self._out('Q')
-        self.angle = angle
+        self.settings.angle = angle
         if angle != 0:
             angle *= math.pi / 180
             c = math.cos(angle)
             s = math.sin(angle)
-            cx = x * self.scale
-            cy = (self.height_unit - y) * self.scale
+            cx = x * self.settings.scale
+            cy = (self.settings.height_unit - y) * self.settings.scale
             s = sprintf('q %.5F %.5F %.5F %.5F %.2F %.2F cm 1 0 0 1 %.2F %.2F cm', c, s, -s, c, cx, cy, -cx, -cy)
             self._out(s)
 
@@ -699,21 +705,21 @@ class FPDF(object):
     def cell(self, w, h=0, txt='', border=0, ln=0, align='', fill=0, link=''):
         """Output a cell"""
         txt = self.normalize_text(txt)
-        k = self.scale
-        if self.y + h > self.page_break_trigger and not self.in_footer and self.auto_page_break:
+        k = self.settings.scale
+        if self.y + h > self.settings.page_break_trigger and not self.in_footer and self.settings.auto_page_break:
             # Automatic page break
             x = self.x
-            ws = self.ws
+            ws = self.settings.word_spacing
             if ws > 0:
-                self.ws = 0
+                self.settings.word_spacing = 0
                 self._out('0 Tw')
             self.add_page(same=True)
             self.x = x
             if ws > 0:
-                self.ws = ws
+                self.settings.word_spacing = ws
                 self._out(sprintf('%.3f Tw', ws * k))
         if w == 0:
-            w = self.width_unit - self.right_page_margin - self.x
+            w = self.settings.width_unit - self.settings.right_page_margin - self.x
         s = ''
         if fill == 1 or border == 1:
             if fill == 1:
@@ -723,34 +729,34 @@ class FPDF(object):
                     op = 'f'
             else:
                 op = 'S'
-            s = sprintf('%.2f %.2f %.2f %.2f re %s ', self.x * k, (self.height_unit - self.y) * k, w * k, -h * k, op)
+            s = sprintf('%.2f %.2f %.2f %.2f re %s ', self.x * k, (self.settings.height_unit - self.y) * k, w * k, -h * k, op)
         if isinstance(border, basestring):
             x = self.x
             y = self.y
             if 'L' in border:
-                s += sprintf('%.2f %.2f m %.2f %.2f l S ', x * k, (self.height_unit - y) * k, x * k, (self.height_unit - (y + h)) * k)
+                s += sprintf('%.2f %.2f m %.2f %.2f l S ', x * k, (self.settings.height_unit - y) * k, x * k, (self.settings.height_unit - (y + h)) * k)
             if 'T' in border:
-                s += sprintf('%.2f %.2f m %.2f %.2f l S ', x * k, (self.height_unit - y) * k, (x + w) * k, (self.height_unit - y) * k)
+                s += sprintf('%.2f %.2f m %.2f %.2f l S ', x * k, (self.settings.height_unit - y) * k, (x + w) * k, (self.settings.height_unit - y) * k)
             if 'R' in border:
-                s += sprintf('%.2f %.2f m %.2f %.2f l S ', (x + w) * k, (self.height_unit - y) * k, (x + w) * k, (self.height_unit - (y + h)) * k)
+                s += sprintf('%.2f %.2f m %.2f %.2f l S ', (x + w) * k, (self.settings.height_unit - y) * k, (x + w) * k, (self.settings.height_unit - (y + h)) * k)
             if 'B' in border:
-                s += sprintf('%.2f %.2f m %.2f %.2f l S ', x * k, (self.height_unit - (y + h)) * k, (x + w) * k, (self.height_unit - (y + h)) * k)
+                s += sprintf('%.2f %.2f m %.2f %.2f l S ', x * k, (self.settings.height_unit - (y + h)) * k, (x + w) * k, (self.settings.height_unit - (y + h)) * k)
         if txt != '':
             if align == 'R':
-                dx = w - self.cell_margin - self.get_string_width(txt, True)
+                dx = w - self.settings.cell_margin - self.get_string_width(txt, True)
             elif align == 'C':
                 dx = (w - self.get_string_width(txt, True)) / 2.0
             else:
-                dx = self.cell_margin
-            if self.color_flag:
-                s += 'q ' + self.text_color + ' '
+                dx = self.settings.cell_margin
+            if self.settings.color_flag:
+                s += 'q ' + self.settings.text_color + ' '
 
             # If multibyte, Tw has no effect - do word spacing using an adjustment before each space
-            if self.ws and self.unifontsubset:
+            if self.settings.word_spacing and self.unifontsubset:
                 for uni in UTF8StringToArray(txt):
                     self.current_font['subset'].append(uni)
                 space = self._escape(UTF8ToUTF16BE(' ', False))
-                s += sprintf('BT 0 Tw %.2F %.2F Td [', (self.x + dx) * k, (self.height_unit - (self.y + 0.5 * h + 0.3 * self.font_size)) * k)
+                s += sprintf('BT 0 Tw %.2F %.2F Td [', (self.x + dx) * k, (self.settings.height_unit - (self.y + 0.5 * h + 0.3 * self.font_size)) * k)
                 t = txt.split(' ')
                 numt = len(t)
                 for i in range(numt):
@@ -758,7 +764,7 @@ class FPDF(object):
                     tx = '(' + self._escape(UTF8ToUTF16BE(tx, False)) + ')'
                     s += sprintf('%s ', tx)
                     if (i + 1) < numt:
-                        adj = -(self.ws * self.scale) * 1000 / self.font_size_pt
+                        adj = -(self.settings.word_spacing * self.settings.scale) * 1000 / self.settings.font_size_pt
                         s += sprintf('%d(%s) ', adj, space)
                 s += '] TJ'
                 s += ' ET'
@@ -769,11 +775,11 @@ class FPDF(object):
                         self.current_font['subset'].append(uni)
                 else:
                     txt2 = self._escape(txt)
-                s += sprintf('BT %.2f %.2f Td (%s) Tj ET', (self.x + dx) * k, (self.height_unit - (self.y + .5 * h + .3 * self.font_size)) * k, txt2)
+                s += sprintf('BT %.2f %.2f Td (%s) Tj ET', (self.x + dx) * k, (self.settings.height_unit - (self.y + .5 * h + .3 * self.font_size)) * k, txt2)
 
-            if self.underline:
+            if self.settings.underline:
                 s += ' ' + self._dounderline(self.x + dx, self.y + .5 * h + .3 * self.font_size, txt)
-            if self.color_flag:
+            if self.settings.color_flag:
                 s += ' Q'
             if link:
                 self.link(self.x + dx, self.y + .5 * h - .5 * self.font_size, self.get_string_width(txt, True), self.font_size, link)
@@ -784,7 +790,7 @@ class FPDF(object):
             # Go to next line
             self.y += h
             if ln == 1:
-                self.x = self.left_page_margin
+                self.x = self.settings.left_page_margin
         else:
             self.x += w
 
@@ -795,8 +801,8 @@ class FPDF(object):
         ret = []  # if split_only = True, returns splited text cells
         char_width = self.current_font['cw']
         if width == 0:
-            width = self.width_unit - self.right_page_margin - self.x
-        wmax = (width - 2 * self.cell_margin) * 1000.0 / self.font_size
+            width = self.settings.width_unit - self.settings.right_page_margin - self.x
+        wmax = (width - 2 * self.settings.cell_margin) * 1000.0 / self.font_size
         s = text.replace("\r", '')
         nb = len(s)
         if nb > 0 and s[nb - 1] == "\n":
@@ -828,8 +834,8 @@ class FPDF(object):
             c = s[i]
             if c == "\n":
                 # Explicit line break
-                if self.ws > 0:
-                    self.ws = 0
+                if self.settings.word_spacing > 0:
+                    self.settings.word_spacing = 0
                     if not split_only:
                         self._out('0 Tw')
                 if not split_only:
@@ -858,8 +864,8 @@ class FPDF(object):
                 if sep == -1:
                     if i == j:
                         i += 1
-                    if self.ws > 0:
-                        self.ws = 0
+                    if self.settings.word_spacing > 0:
+                        self.settings.word_spacing = 0
                         if not split_only:
                             self._out('0 Tw')
                     if not split_only:
@@ -869,11 +875,11 @@ class FPDF(object):
                 else:
                     if align == 'J':
                         if ns > 1:
-                            self.ws = (wmax - ls) / 1000.0 * self.font_size / (ns - 1)
+                            self.settings.word_spacing = (wmax - ls) / 1000.0 * self.font_size / (ns - 1)
                         else:
-                            self.ws = 0
+                            self.settings.word_spacing = 0
                         if not split_only:
-                            self._out(sprintf('%.3f Tw', self.ws * self.scale))
+                            self._out(sprintf('%.3f Tw', self.settings.word_spacing * self.settings.scale))
                     if not split_only:
                         self.cell(width, height, substr(s, j, sep - j), b, 2, align, fill)
                     else:
@@ -889,15 +895,15 @@ class FPDF(object):
             else:
                 i += 1
         # Last chunk
-        if self.ws > 0:
-            self.ws = 0
+        if self.settings.word_spacing > 0:
+            self.settings.word_spacing = 0
             if not split_only:
                 self._out('0 Tw')
         if border and 'B' in border:
             b += 'B'
         if not split_only:
             self.cell(width, height, substr(s, j, i - j), b, 2, align, fill)
-            self.x = self.left_page_margin
+            self.x = self.settings.left_page_margin
         else:
             ret.append(substr(s, j, i - j))
         return ret
@@ -907,8 +913,8 @@ class FPDF(object):
         """Output text in flowing mode"""
         txt = self.normalize_text(txt)
         cw = self.current_font['cw']
-        w = self.width_unit - self.right_page_margin - self.x
-        wmax = (w - 2 * self.cell_margin) * 1000.0 / self.font_size
+        w = self.settings.width_unit - self.settings.right_page_margin - self.x
+        wmax = (w - 2 * self.settings.cell_margin) * 1000.0 / self.font_size
         s = txt.replace("\r", '')
         nb = len(s)
         sep = -1
@@ -927,9 +933,9 @@ class FPDF(object):
                 j = i
                 l = 0
                 if nl == 1:
-                    self.x = self.left_page_margin
-                    w = self.width_unit - self.right_page_margin - self.x
-                    wmax = (w - 2 * self.cell_margin) * 1000.0 / self.font_size
+                    self.x = self.settings.left_page_margin
+                    w = self.settings.width_unit - self.settings.right_page_margin - self.x
+                    wmax = (w - 2 * self.settings.cell_margin) * 1000.0 / self.font_size
                 nl += 1
                 continue
             if c == ' ':
@@ -941,12 +947,12 @@ class FPDF(object):
             if l > wmax:
                 # Automatic line break
                 if sep == -1:
-                    if self.x > self.left_page_margin:
+                    if self.x > self.settings.left_page_margin:
                         # Move to next line
-                        self.x = self.left_page_margin
+                        self.x = self.settings.left_page_margin
                         self.y += h
-                        w = self.width_unit - self.right_page_margin - self.x
-                        wmax = (w - 2 * self.cell_margin) * 1000.0 / self.font_size
+                        w = self.settings.width_unit - self.settings.right_page_margin - self.x
+                        wmax = (w - 2 * self.settings.cell_margin) * 1000.0 / self.font_size
                         i += 1
                         nl += 1
                         continue
@@ -960,9 +966,9 @@ class FPDF(object):
                 j = i
                 l = 0
                 if nl == 1:
-                    self.x = self.left_page_margin
-                    w = self.width_unit - self.right_page_margin - self.x
-                    wmax = (w - 2 * self.cell_margin) * 1000.0 / self.font_size
+                    self.x = self.settings.left_page_margin
+                    w = self.settings.width_unit - self.settings.right_page_margin - self.x
+                    wmax = (w - 2 * self.settings.cell_margin) * 1000.0 / self.font_size
                 nl += 1
             else:
                 i += 1
@@ -1021,15 +1027,15 @@ class FPDF(object):
         # Automatic width and height calculation if needed
         if w == 0 and h == 0:
             # Put image at 72 dpi
-            w = info['w'] / self.scale
-            h = info['h'] / self.scale
+            w = info['w'] / self.settings.scale
+            h = info['h'] / self.settings.scale
         elif w == 0:
             w = h * info['w'] / info['h']
         elif h == 0:
             h = w * info['h'] / info['w']
         # Flowing mode
         if y is None:
-            if self.y + h > self.page_break_trigger and not self.in_footer and self.auto_page_break:
+            if self.y + h > self.settings.page_break_trigger and not self.in_footer and self.settings.auto_page_break:
                 # Automatic page break
                 x = self.x
                 self.add_page(same=True)
@@ -1040,7 +1046,7 @@ class FPDF(object):
             x = self.x
         if not is_mask:
             self._out(
-                sprintf('q %.2f 0 0 %.2f %.2f %.2f cm /I%d Do Q', w * self.scale, h * self.scale, x * self.scale, (self.height_unit - (y + h)) * self.scale,
+                sprintf('q %.2f 0 0 %.2f %.2f %.2f cm /I%d Do Q', w * self.settings.scale, h * self.settings.scale, x * self.settings.scale, (self.settings.height_unit - (y + h)) * self.settings.scale,
                         info['i']))
         if link:
             self.link(x, y, w, h, link)
@@ -1050,7 +1056,7 @@ class FPDF(object):
     @check_page
     def ln(self, h=''):
         """Line Feed; default value is last cell height"""
-        self.x = self.left_page_margin
+        self.x = self.settings.left_page_margin
         if isinstance(h, basestring):
             self.y += self.lasth
         else:
@@ -1065,7 +1071,7 @@ class FPDF(object):
         if x >= 0:
             self.x = x
         else:
-            self.x = self.width_unit + x
+            self.x = self.settings.width_unit + x
 
     def get_y(self):
         """Get y position"""
@@ -1073,11 +1079,11 @@ class FPDF(object):
 
     def set_y(self, y):
         """Set y position and reset x"""
-        self.x = self.left_page_margin
+        self.x = self.settings.left_page_margin
         if y >= 0:
             self.y = y
         else:
-            self.y = self.height_unit + y
+            self.y = self.settings.height_unit + y
 
     def set_xy(self, x, y):
         """Set x and y positions"""
@@ -1127,10 +1133,10 @@ class FPDF(object):
             if self.unifontsubset and isinstance(txt, str):
                 return txt.decode("utf-8")
             elif not self.unifontsubset and isinstance(txt, unicode):
-                return txt.encode(self.core_fonts_encoding)
+                return txt.encode(self.settings.core_fonts_encoding)
         else:
-            if not self.unifontsubset and self.core_fonts_encoding:
-                return txt.encode(self.core_fonts_encoding).decode("latin-1")
+            if not self.unifontsubset and self.settings.core_fonts_encoding:
+                return txt.encode(self.settings.core_fonts_encoding).decode("latin-1")
         return txt
 
     def _dochecks(self):
@@ -1156,13 +1162,13 @@ class FPDF(object):
             # Now repeat for no pages in non-subset fonts
             for n in range(1, nb + 1):
                 self.pages[n]["content"] = self.pages[n]["content"].replace(self.str_alias_nb_pages, str(nb))
-        if self.def_orientation == 'P':
-            dw_pt = self.document_width_points
-            dh_pt = self.document_height_points
+        if self.settings.def_orientation == 'P':
+            dw_pt = self.settings.document_width_points
+            dh_pt = self.settings.document_height_points
         else:
-            dw_pt = self.document_height_points
-            dh_pt = self.document_width_points
-        if self.compress:
+            dw_pt = self.settings.document_height_points
+            dh_pt = self.settings.document_width_points
+        if self.settings.compress:
             filter = '/Filter /FlateDecode '
         else:
             filter = ''
@@ -1193,7 +1199,7 @@ class FPDF(object):
                             h = w_pt
                         else:
                             h = h_pt
-                        annots += sprintf('/Dest [%d 0 R /XYZ 0 %.2f null]>>', 1 + 2 * l[0], h - l[1] * self.scale)
+                        annots += sprintf('/Dest [%d 0 R /XYZ 0 %.2f null]>>', 1 + 2 * l[0], h - l[1] * self.settings.scale)
                 self._out(annots + ']')
             if self.pdf_version > '1.3':
                 self._out("/Group <</Type /Group /S /Transparency /CS /DeviceRGB>>")
@@ -1201,7 +1207,7 @@ class FPDF(object):
             self._out('endobj')
             # Page content
             content = self.pages[n]["content"]
-            if self.compress:
+            if self.settings.compress:
                 # manage binary data as latin1 until PEP461 or similar is implemented
                 p = content.encode("latin1") if PY3K else content
                 p = zlib.compress(p)
@@ -1529,7 +1535,7 @@ class FPDF(object):
 
     def _putimages(self):
         filter = ''
-        if self.compress:
+        if self.settings.compress:
             filter = '/Filter /FlateDecode '
         i = [(x[1]["i"], x[1]) for x in self.images.items()]
         i.sort()
@@ -1580,8 +1586,8 @@ class FPDF(object):
             # Palette
             if info['cs'] == 'Indexed':
                 self._newobj()
-                filter = self.compress and '/Filter /FlateDecode ' or ''
-                if self.compress:
+                filter = self.settings.compress and '/Filter /FlateDecode ' or ''
+                if self.settings.compress:
                     pal = zlib.compress(info['pal'])
                 else:
                     pal = info['pal']
@@ -1635,20 +1641,20 @@ class FPDF(object):
     def _putcatalog(self):
         self._out('/Type /Catalog')
         self._out('/Pages 1 0 R')
-        if self.zoom_mode == 'fullpage':
+        if self.settings.zoom_mode == 'fullpage':
             self._out('/OpenAction [3 0 R /Fit]')
-        elif self.zoom_mode == 'fullwidth':
+        elif self.settings.zoom_mode == 'fullwidth':
             self._out('/OpenAction [3 0 R /FitH null]')
-        elif self.zoom_mode == 'real':
+        elif self.settings.zoom_mode == 'real':
             self._out('/OpenAction [3 0 R /XYZ null null 1]')
-        elif not isinstance(self.zoom_mode, basestring):
-            self._out(sprintf('/OpenAction [3 0 R /XYZ null null %s]', self.zoom_mode / 100))
+        elif not isinstance(self.settings.zoom_mode, basestring):
+            self._out(sprintf('/OpenAction [3 0 R /XYZ null null %s]', self.settings.zoom_mode / 100))
 
-        if self.layout_mode == 'single':
+        if self.settings.layout_mode == 'single':
             self._out('/PageLayout /SinglePage')
-        elif self.layout_mode == 'continuous':
+        elif self.settings.layout_mode == 'continuous':
             self._out('/PageLayout /OneColumn')
-        elif self.layout_mode == 'two':
+        elif self.settings.layout_mode == 'two':
             self._out('/PageLayout /TwoColumnLeft')
 
     def _putheader(self):
@@ -1696,36 +1702,36 @@ class FPDF(object):
         self.page += 1
         self.pages[self.page] = {"content": ""}
         self.state = 2
-        self.x = self.left_page_margin
-        self.y = self.top_page_margin
-        self.font_family = ''
-        self.font_stretching = 100
+        self.x = self.settings.left_page_margin
+        self.y = self.settings.top_page_margin
+        self.settings.font_family = ''
+        self.settings.font_stretching = 100
         if not same:
             # Page format
             if format:
                 # Change page format
-                self.file_width_points, self.file_height_points = get_page_dimensions(format, self.scale)
+                self.settings.file_width_points, self.file_height_points = get_page_dimensions(format, self.settings.scale)
             else:
                 # Set to default format
-                self.file_width_points = self.document_width_points
-                self.file_height_points = self.document_height_points
-            self.file_width_unit = self.file_width_points / self.scale
-            self.file_height_unit = self.file_height_points / self.scale
+                self.settings.file_width_points = self.settings.document_width_points
+                self.file_height_points = self.settings.document_height_points
+            self.settings.file_width_unit = self.settings.file_width_points / self.settings.scale
+            self.settings.file_height_unit = self.file_height_points / self.settings.scale
             # Page orientation
             if not orientation:
-                orientation = self.def_orientation
+                orientation = self.settings.def_orientation
             else:
                 orientation = orientation[0].upper()
             if orientation == 'P':
-                self.width_points = self.file_width_points
+                self.settings.width_points = self.settings.file_width_points
                 self.height_points = self.file_height_points
             else:
-                self.width_points = self.file_height_points
-                self.height_points = self.file_width_points
-            self.width_unit = self.width_points / self.scale
-            self.height_unit = self.height_points / self.scale
-            self.page_break_trigger = self.height_unit - self.bottom_page_margin
-        self.pages[self.page]["w_pt"] = self.width_points
+                self.settings.width_points = self.file_height_points
+                self.height_points = self.settings.file_width_points
+            self.settings.width_unit = self.settings.width_points / self.settings.scale
+            self.settings.height_unit = self.height_points / self.settings.scale
+            self.settings.page_break_trigger = self.settings.height_unit - self.settings.bottom_page_margin
+        self.pages[self.page]["w_pt"] = self.settings.width_points
         self.pages[self.page]["h_pt"] = self.height_points
 
     def _endpage(self):
@@ -1742,9 +1748,9 @@ class FPDF(object):
         # Underline text
         up = self.current_font['up']
         ut = self.current_font['ut']
-        w = self.get_string_width(txt, True) + self.ws * txt.count(' ')
-        return sprintf('%.2f %.2f %.2f %.2f re f', x * self.scale, (self.height_unit - (y - up / 1000.0 * self.font_size)) * self.scale, w * self.scale,
-                       -ut / 1000.0 * self.font_size_pt)
+        w = self.get_string_width(txt, True) + self.settings.word_spacing * txt.count(' ')
+        return sprintf('%.2f %.2f %.2f %.2f re f', x * self.settings.scale, (self.settings.height_unit - (y - up / 1000.0 * self.font_size)) * self.settings.scale, w * self.settings.scale,
+                       -ut / 1000.0 * self.settings.font_size_pt)
 
     def load_resource(self, reason, filename):
         """Load external file"""
