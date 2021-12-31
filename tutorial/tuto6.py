@@ -95,7 +95,7 @@ pdf.set_font('')
 pdf.add_page()
 pdf.set_link(link)
 pdf.image('logo.png', 10, 10, 30, 0, '', 'http://www.fpdf.org')
-pdf.set_left_margin(45)
+pdf.settings.left_page_margin = 45
 pdf.set_font_size(14)
 pdf.write_html(html)
 pdf.output('tuto6.pdf', 'F')

@@ -2,7 +2,14 @@ from .helpers import init_display_zoom_level, init_display_layout_mode, get_page
 
 
 class PDFSettings:
-    def __init__(self, orientation='P', unit='mm', format='A4'):
+    def __init__(self, orientation='P', unit='mm', format='A4', title=None, subject=None, author=None, keywords=None, creator=None):
+
+        self.title = title
+        self.subject = subject
+        self.author = author
+        self.keywords = keywords
+        self.creator = creator
+
         self.font_family = ''  # current font family
         self.font_style = ''  # current font style
         self.font_size_pt = 12  # current font size in points

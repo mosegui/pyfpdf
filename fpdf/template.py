@@ -24,11 +24,11 @@ class Template:
                          'B': self.rect, 'BC': self.barcode, 'W': self.write, }
         self.texts = {}
         pdf = self.pdf = FPDF(format=format,orientation=orientation, unit="mm")
-        pdf.set_title(title)
-        pdf.set_author(author)
-        pdf.set_creator(creator)
-        pdf.set_subject(subject)
-        pdf.set_keywords(keywords)
+        pdf.settings.title = title
+        pdf.settings.author = author
+        pdf.settings.creator = creator
+        pdf.settings.subject = subject
+        pdf.settings.keywords = keywords
 
     def load_elements(self, elements):
         "Initialize the internal element structures"

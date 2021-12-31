@@ -15,6 +15,7 @@
 
 from __future__ import division, with_statement
 
+from abc import abstractmethod
 from datetime import datetime
 from functools import wraps
 import math
@@ -107,40 +108,6 @@ class FPDF:
                 return fn(self, *args, **kwargs)
 
         return wrapper
-
-    def set_left_margin(self, margin):
-        """Set left margin"""
-        self.settings.left_page_margin = margin
-        if self.page > 0 and self.x < margin:
-            self.x = margin
-
-    def set_top_margin(self, margin):
-        """Set top margin"""
-        self.settings.top_page_margin = margin
-
-    def set_right_margin(self, margin):
-        """Set right margin"""
-        self.settings.right_page_margin = margin
-
-    def set_title(self, title):
-        """Title of document"""
-        self.title = title
-
-    def set_subject(self, subject):
-        """Subject of document"""
-        self.subject = subject
-
-    def set_author(self, author):
-        """Author of document"""
-        self.author = author
-
-    def set_keywords(self, keywords):
-        """Keywords of document"""
-        self.keywords = keywords
-
-    def set_creator(self, creator):
-        """Creator of document"""
-        self.creator = creator
 
     def set_doc_option(self, opt, value):
         """Set document option"""

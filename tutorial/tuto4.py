@@ -2,6 +2,7 @@ from __future__ import with_statement
 
 from fpdf import *
 
+
 class PDF(FPDF):
     # Current column
     col = 0
@@ -32,8 +33,8 @@ class PDF(FPDF):
     def set_col(self, col):
         # Set position at a given column
         self.col = col
-        x=10 + col * 65.0
-        self.set_left_margin(x)
+        x = 10 + col * 65.0
+        self.settings.left_page_margin = x
         self.set_x(x)
 
     def accept_page_break(self):
@@ -81,11 +82,12 @@ class PDF(FPDF):
         self.chapter_title(num, title)
         self.chapter_body(name)
 
-pdf = PDF()
-title = '20000 Leagues Under the Seas'
-pdf.set_title(title)
-pdf.set_author('Jules Verne')
-pdf.print_chapter(1, 'A RUNAWAY REEF','20k_c1.txt')
-pdf.print_chapter(2, 'THE PROS AND CONS','20k_c2.txt')
-pdf.output('tuto4.pdf', 'F')
 
+if __name__ == "__main__":
+    pdf = PDF()
+    title = '20000 Leagues Under the Seas'
+    pdf.settings.title = title
+    pdf.settings.author = 'Jules Verne'
+    pdf.print_chapter(1, 'A RUNAWAY REEF', '20k_c1.txt')
+    pdf.print_chapter(2, 'THE PROS AND CONS', '20k_c2.txt')
+    pdf.output('tuto4.pdf', 'F')
