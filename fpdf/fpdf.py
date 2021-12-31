@@ -27,7 +27,7 @@ from .fonts import fpdf_charwidths
 from .php import substr, sprintf, UTF8ToUTF16BE, UTF8StringToArray
 from .py3k import PY3K, pickle, urlopen, BytesIO, Image, basestring, unicode, exception, b, hashpath
 
-from .helpers import get_page_dimensions
+from .helpers import get_page_dimensions, load_cache, CatchAllError, check_page
 from.pdf_settings import PDFSettings
 
 
@@ -42,21 +42,6 @@ SYSTEM_TTFONTS = None
 def set_global(var, val):
     globals()[var] = val
 
-
-def load_cache(filename):
-    """Return unpickled object, or None if cache unavailable"""
-    if not filename:
-        return None
-    try:
-        with open(filename, "rb") as fh:
-            return pickle.load(fh)
-    except (IOError, ValueError):  # File missing, unsupported pickle, etc
-        return None
-
-
-class CatchAllError(Exception):
-    # Is here to replace a deprecated raise CatchAllError method. Adjust instances to best types of error
-    pass
 
 
 class FPDF:
@@ -94,20 +79,6 @@ class FPDF:
         self.lasth = 0  # height of last cell printed
 
         self.settings = PDFSettings(orientation=orientation, unit=unit, format=format)
-
-    def check_page(fn):
-        """
-        Decorator to protect drawing methods
-        """
-
-        @wraps(fn)
-        def wrapper(self, *args, **kwargs):
-            if not self.page and not kwargs.get('split_only'):
-                raise CatchAllError("No page open, you need to call add_page() first")
-            else:
-                return fn(self, *args, **kwargs)
-
-        return wrapper
 
     def set_doc_option(self, opt, value):
         """Set document option"""

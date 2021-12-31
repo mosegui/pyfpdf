@@ -1,4 +1,6 @@
 from .py3k import basestring
+import pickle
+import functools
 
 # TODO: get rid of the basetring and of the support for Python 2.X
 
@@ -38,3 +40,34 @@ def get_page_dimensions(format: str, scale: float):
             raise ValueError(f"Unknown page format: {format}. Allowed formats: {PAGE_FORMATS.keys()}")
     else:
         return format[0] * scale, format[1] * scale
+
+
+def load_cache(filename):
+    """Return unpickled object, or None if cache unavailable"""
+    if not filename:
+        return None
+    try:
+        with open(filename, "rb") as fh:
+            return pickle.load(fh)
+    except (IOError, ValueError):  # File missing, unsupported pickle, etc
+        return None
+
+
+class CatchAllError(Exception):
+    # Is here to replace a deprecated raise CatchAllError method. Adjust instances to best types of error
+    pass
+
+
+def check_page(fn):
+    """
+    Decorator to protect drawing methods
+    """
+
+    @functools.wraps(fn)
+    def wrapper(self, *args, **kwargs):
+        if not self.page and not kwargs.get('split_only'):
+            raise CatchAllError("No page open, you need to call add_page() first")
+        else:
+            return fn(self, *args, **kwargs)
+
+    return wrapper
