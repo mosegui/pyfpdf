@@ -72,7 +72,7 @@ or on an image: click on the logo.<br>
         def footer(self):
             self.set_y(-15)
             self.set_font('Arial','I',8)
-            txt = 'Page %s of %s' % (self.page_no(), self.alias_nb_pages())
+            txt = 'Page %s of %s' % (self.current_page, self.str_alias_nb_pages)
             self.cell(0,10,txt,0,0,'C')
         
     pdf=MyFPDF()

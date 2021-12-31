@@ -65,7 +65,7 @@ def check_page(fn):
 
     @functools.wraps(fn)
     def wrapper(self, *args, **kwargs):
-        if not self.page and not kwargs.get('split_only'):
+        if not self.current_page and not kwargs.get('split_only'):
             raise CatchAllError("No page open, you need to call add_page() first")
         else:
             return fn(self, *args, **kwargs)

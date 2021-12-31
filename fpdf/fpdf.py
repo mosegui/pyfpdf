@@ -15,9 +15,10 @@
 
 from __future__ import division, with_statement
 
+from enum import Enum
+
 from abc import abstractmethod
 from datetime import datetime
-from functools import wraps
 import math
 import errno
 import os, sys, zlib, re, tempfile, struct
@@ -43,6 +44,12 @@ def set_global(var, val):
     globals()[var] = val
 
 
+class DocumentState(Enum):
+    UNSTARTED = 0
+    OPEN_IDLE = 1
+    WRITING_PAGE = 2
+    TERMINATED = 3
+
 
 class FPDF:
     pdf_version = "1.3"
@@ -58,54 +65,39 @@ class FPDF:
         'symbol': 'Symbol', 'zapfdingbats': 'ZapfDingbats'
     }
 
+    in_footer = False  # flag set when processing footer
+
     def __init__(self, orientation='P', unit='mm', format='A4'):
         # Some checks
         self._dochecks()
         # Initialization of properties
         self.offsets = {}  # array of object offsets
-        self.page = 0  # current page number
+        self.current_page = 0  # current page number
         self.n = 2  # current object number
         self.buffer = ''  # buffer holding in-memory PDF
         self.pages = {}  # array containing pages and metadata
-        self.state = 0  # current document state
+        self.state = DocumentState.UNSTARTED  # current document state
         self.fonts = {}  # array of used fonts
         self.font_files = {}  # array of font files
         self.diffs = {}  # array of encoding differences
         self.images = {}  # array of used images
         self.page_links = {}  # array of links in pages
         self.links = {}  # array of internal links
-        self.in_footer = 0  # flag set when processing footer
 
         self.lasth = 0  # height of last cell printed
 
         self.settings = PDFSettings(orientation=orientation, unit=unit, format=format)
 
-    def set_doc_option(self, opt, value):
-        """Set document option"""
-        if opt == "core_fonts_encoding":
-            self.settings.core_fonts_encoding = value
-        else:
-            raise CatchAllError("Unknown document option \"%s\"" % str(opt))
-
-    def alias_nb_pages(self, alias='{nb}'):
-        """Define an alias for total number of pages"""
-        self.str_alias_nb_pages = alias
-        return alias
-
-    def open(self):
-        """Begin document"""
-        self.state = 1
-
     def close(self):
         """Terminate document"""
-        if self.state == 3:
+        if self.state == DocumentState.TERMINATED:
             return
-        if self.page == 0:
+
+        if self.current_page == 0:
             self.add_page()
-        # Page footer
-        self.in_footer = 1
-        self.footer()
-        self.in_footer = 0
+
+        self.add_footer()
+
         # close page
         self._endpage()
         # close document
@@ -113,8 +105,10 @@ class FPDF:
 
     def add_page(self, orientation='', format='', same=False):
         """Start a new page, if same page format will be same as previous"""
-        if self.state == 0:
-            self.open()
+
+        if self.state == DocumentState.UNSTARTED:
+            self.state = DocumentState.OPEN_IDLE
+
         family = self.settings.font_family
         if self.settings.underline:
             style = self.settings.font_style + 'U'
@@ -127,13 +121,11 @@ class FPDF:
         tc = self.settings.text_color
         cf = self.settings.color_flag
         stretching = self.settings.font_stretching
-        if self.page > 0:
-            # Page footer
-            self.in_footer = 1
-            self.footer()
-            self.in_footer = 0
-            # close page
+
+        if self.current_page > 0:
+            self.add_footer()
             self._endpage()
+
         # Start new page
         self._beginpage(orientation, format, same)
         # Set line cap style to square
@@ -179,13 +171,14 @@ class FPDF:
         """Header to be implemented in your own inherited class"""
         pass
 
+    def add_footer(self):
+        self.in_footer = True
+        self.footer()
+        self.in_footer = False
+
     def footer(self):
         """Footer to be implemented in your own inherited class"""
         pass
-
-    def page_no(self):
-        """Get current page number"""
-        return self.page
 
     def set_draw_color(self, r, g=-1, b=-1):
         """Set color for all stroking operations"""
@@ -193,7 +186,7 @@ class FPDF:
             self.settings.draw_color = sprintf('%.3f G', r / 255.0)
         else:
             self.settings.draw_color = sprintf('%.3f %.3f %.3f RG', r / 255.0, g / 255.0, b / 255.0)
-        if (self.page > 0):
+        if (self.current_page > 0):
             self._out(self.settings.draw_color)
 
     def set_fill_color(self, r, g=-1, b=-1):
@@ -203,7 +196,7 @@ class FPDF:
         else:
             self.settings.fill_color = sprintf('%.3f %.3f %.3f rg', r / 255.0, g / 255.0, b / 255.0)
         self.settings.color_flag = (self.settings.fill_color != self.settings.text_color)
-        if (self.page > 0):
+        if (self.current_page > 0):
             self._out(self.settings.fill_color)
 
     def set_text_color(self, r, g=-1, b=-1):
@@ -242,7 +235,7 @@ class FPDF:
     def set_line_width(self, width):
         """Set line width"""
         self.settings.line_width = width
-        if self.page > 0:
+        if self.current_page > 0:
             self._out(sprintf('%.2f w', width * self.settings.scale))
 
     @check_page
@@ -475,7 +468,7 @@ class FPDF:
         self.font_size = size / self.settings.scale
         self.current_font = self.fonts[fontkey]
         self.unifontsubset = (self.fonts[fontkey]['type'] == 'TTF')
-        if self.page > 0:
+        if self.current_page > 0:
             self._out(sprintf('BT /F%d %.2f Tf ET', self.current_font['i'], self.settings.font_size_pt))
 
     def set_font_size(self, size):
@@ -484,7 +477,7 @@ class FPDF:
             return
         self.settings.font_size_pt = size
         self.font_size = size / self.settings.scale
-        if self.page > 0:
+        if self.current_page > 0:
             self._out(sprintf('BT /F%d %.2f Tf ET', self.current_font['i'], self.settings.font_size_pt))
 
     def set_stretching(self, factor):
@@ -492,7 +485,7 @@ class FPDF:
         if self.settings.font_stretching == factor:
             return
         self.settings.font_stretching = factor
-        if self.page > 0:
+        if self.current_page > 0:
             self._out(sprintf('BT %.2f Tz ET', self.settings.font_stretching))
 
     def add_link(self):
@@ -506,14 +499,14 @@ class FPDF:
         if y == -1:
             y = self.y
         if page == -1:
-            page = self.page
+            page = self.current_page
         self.links[link] = [page, y]
 
     def link(self, x, y, w, h, link):
         """Put a link on the page"""
-        if not self.page in self.page_links:
-            self.page_links[self.page] = []
-        self.page_links[self.page] += [(x * self.settings.scale, self.height_points - y * self.settings.scale, w * self.settings.scale, h * self.settings.scale, link), ]
+        if not self.current_page in self.page_links:
+            self.page_links[self.current_page] = []
+        self.page_links[self.current_page] += [(x * self.settings.scale, self.height_points - y * self.settings.scale, w * self.settings.scale, h * self.settings.scale, link), ]
 
     @check_page
     def text(self, x, y, txt=''):
@@ -947,7 +940,7 @@ class FPDF:
         returned as a byte string."""
 
         # Finish document if necessary
-        if self.state < 3:
+        if self.state.value < DocumentState.TERMINATED.value:
             self.close()
         dest = dest.upper()
         if dest == '':
@@ -1001,7 +994,7 @@ class FPDF:
         return FPDF_FONT_DIR + '/'
 
     def _putpages(self):
-        nb = self.page
+        nb = self.current_page
         if hasattr(self, 'str_alias_nb_pages'):
             # Replace number of pages in fonts using subsets (unicode)
             alias = UTF8ToUTF16BE(self.str_alias_nb_pages, False)
@@ -1545,12 +1538,12 @@ class FPDF:
         self._out('startxref')
         self._out(o)
         self._out('%%EOF')
-        self.state = 3
+        self.state = DocumentState.TERMINATED
 
     def _beginpage(self, orientation, format, same):
-        self.page += 1
-        self.pages[self.page] = {"content": ""}
-        self.state = 2
+        self.current_page += 1
+        self.pages[self.current_page] = {"content": ""}
+        self.state = DocumentState.WRITING_PAGE
         self.x = self.settings.left_page_margin
         self.y = self.settings.top_page_margin
         self.settings.font_family = ''
@@ -1580,12 +1573,12 @@ class FPDF:
             self.settings.width_unit = self.settings.width_points / self.settings.scale
             self.settings.height_unit = self.height_points / self.settings.scale
             self.settings.page_break_trigger = self.settings.height_unit - self.settings.bottom_page_margin
-        self.pages[self.page]["w_pt"] = self.settings.width_points
-        self.pages[self.page]["h_pt"] = self.height_points
+        self.pages[self.current_page]["w_pt"] = self.settings.width_points
+        self.pages[self.current_page]["h_pt"] = self.height_points
 
     def _endpage(self):
         # End of page contents
-        self.state = 1
+        self.state = DocumentState.OPEN_IDLE
 
     def _newobj(self):
         # Begin a new object
@@ -1813,8 +1806,8 @@ class FPDF:
             s = s.encode("latin1")  # default encoding (font name and similar)
         elif not isinstance(s, basestring):
             s = str(s)
-        if self.state == 2:
-            self.pages[self.page]["content"] += (s + "\n")
+        if self.state == DocumentState.WRITING_PAGE:
+            self.pages[self.current_page]["content"] += (s + "\n")
         else:
             self.buffer += (s + "\n")
 

@@ -313,14 +313,14 @@ class MyPDF(FPDF):
     def footer(self):
         self.set_y(-15)
         self.set_font('Arial', 'I', 8)
-        self.cell(0, 10, 'Page %s / {nb}' % self.page_no(), 0, 0, 'C')    
+        self.cell(0, 10, 'Page %s / {nb}' % self.current_page, 0, 0, 'C')
 
 @common.add_unittest
 def dotest(outputname, nostamp):
     pdf = MyPDF()
     pdf.p_hdr1 = "Latin Character Set and WinAnsiEncoding (1252)"
     pdf.p_hdr2 = "PDF 1.7, annex D.1, pages 997-1000"
-    pdf.alias_nb_pages()
+    pdf.str_alias_nb_pages = "{nb}"
     pdf.compress = False
     use_exfont = False
     if nostamp:
@@ -437,7 +437,7 @@ def dotest(outputname, nostamp):
     pdf.add_page()
     # without this setting we should use 
     #  txt.encode("windows-1252").decode("latin-1") for every output
-    pdf.set_doc_option("core_fonts_encoding", "windows-1252")
+    pdf.settings.core_fonts_encoding = "windows-1252"
     cc = {}
     codec = {}
     for x in range(256):

@@ -30,7 +30,7 @@ class PDF(FPDF):
         # Text color in gray
         self.set_text_color(128)
         # Page number
-        self.cell(0, 10, 'Page ' + str(self.page_no()), 0, 0, 'C')
+        self.cell(0, 10, 'Page ' + str(self.current_page), 0, 0, 'C')
 
     def chapter_title(self, num, label):
         # Arial 12

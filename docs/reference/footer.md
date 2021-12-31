@@ -1,7 +1,7 @@
 ## footer ##
 
 ```python
-fpdf.footer()
+fpdf.add_footer()
 ```
 
 ### Description ###

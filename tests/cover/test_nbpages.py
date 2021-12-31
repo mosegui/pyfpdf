@@ -20,12 +20,10 @@ def dotest(outputname, nostamp):
 
     fpdf.set_global("FPDF_CACHE_MODE", 1)
     # set default alias: {nb} that will be replaced with total page count
-    pdf.alias_nb_pages()
+    pdf.str_alias_nb_pages = "{nb}"
 
     # Add a Unicode font (uses UTF-8)
-    pdf.add_font('DejaVu', '', \
-        os.path.join(common.basepath, "font", 'DejaVuSansCondensed.ttf'), \
-        uni = True)
+    pdf.add_font('DejaVu', '', os.path.join(common.basepath, "font", 'DejaVuSansCondensed.ttf'), uni = True)
     pdf.set_font('DejaVu', '', 14)
 
     for i in range(5):

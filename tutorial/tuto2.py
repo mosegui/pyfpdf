@@ -20,11 +20,11 @@ class PDF(FPDF):
         # Arial italic 8
         self.set_font('Arial', 'I', 8)
         # Page number
-        self.cell(0, 10, 'Page ' + str(self.page_no()) + '/{nb}', 0, 0, 'C')
+        self.cell(0, 10, 'Page ' + str(self.current_page) + '/{nb}', 0, 0, 'C')
 
 # Instantiation of inherited class
 pdf = PDF()
-pdf.alias_nb_pages()
+pdf.str_alias_nb_pages = "{nb}"
 pdf.add_page()
 pdf.set_font('Times', '', 12)
 for i in range(1, 41):

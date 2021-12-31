@@ -2,6 +2,9 @@ from .helpers import init_display_zoom_level, init_display_layout_mode, get_page
 
 
 class PDFSettings:
+
+    core_fonts_encoding = "latin-1"
+
     def __init__(self, orientation='P', unit='mm', format='A4', title=None, subject=None, author=None, keywords=None, creator=None):
 
         self.title = title
@@ -21,8 +24,6 @@ class PDFSettings:
         self.color_flag = 0  # indicates whether fill and text colors are different
         self.word_spacing = 0  # word spacing
         self.angle = 0
-
-        self.core_fonts_encoding = "latin-1"
 
         self.scale = self.get_units_scale(unit)
 

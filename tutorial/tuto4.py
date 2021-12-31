@@ -28,7 +28,7 @@ class PDF(FPDF):
         self.set_y(-15)
         self.set_font('Arial', 'I', 8)
         self.set_text_color(128)
-        self.cell(0, 10, 'Page ' + str(self.page_no()), 0, 0, 'C')
+        self.cell(0, 10, 'Page ' + str(self.current_page), 0, 0, 'C')
 
     def set_col(self, col):
         # Set position at a given column
