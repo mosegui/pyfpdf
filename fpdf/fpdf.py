@@ -51,6 +51,23 @@ class DocumentState(Enum):
     TERMINATED = 3
 
 
+class FontSettings:
+    def __init__(self, font_family, font_style, underlined, font_size, line_width, draw_color, fill_color, text_color, color_flag, font_stretching):
+        self.font_family = font_family
+        self.font_style = font_style
+        self.underlined = underlined
+        self.font_size = font_size
+        self.line_width = line_width
+        self.draw_color = draw_color
+        self.fill_color = fill_color
+        self.text_color = text_color
+        self.color_flag = color_flag
+        self.font_stretching = font_stretching
+
+        if self.underlined:
+            self.font_style += 'U'
+
+
 class FPDF:
     pdf_version = "1.3"
 
@@ -97,75 +114,67 @@ class FPDF:
             self.add_page()
 
         self.add_footer()
-
-        # close page
         self._endpage()
-        # close document
         self._enddoc()
+
+    def get_font_settings(self):
+        return FontSettings(self.settings.font_family,
+                            self.settings.font_style,
+                            self.settings.underline,
+                            self.settings.font_size_pt,
+                            self.settings.line_width,
+                            self.settings.draw_color,
+                            self.settings.fill_color,
+                            self.settings.text_color,
+                            self.settings.color_flag,
+                            self.settings.font_stretching)
+
+    def set_font_settings(self, font_settings: FontSettings):
+
+        # Restore line width
+        self.settings.line_width = font_settings.line_width
+        self._out(sprintf('%.2f w', self.settings.line_width * self.settings.scale))
+
+        # Restore font
+        if font_settings.font_family:
+            self.set_font(font_settings.font_family, font_settings.font_style, font_settings.font_size)
+
+        # Restore colors
+        self.settings.draw_color = font_settings.draw_color
+        if self.settings.draw_color != '0 G':
+            self._out(self.settings.draw_color)
+
+        self.settings.fill_color = font_settings.fill_color
+        if self.settings.fill_color != '0 g':
+            self._out(self.settings.fill_color)
+
+        self.settings.text_color = font_settings.text_color
+        self.settings.color_flag = font_settings.color_flag
+
+        self.set_stretching(font_settings.font_stretching)
 
     def add_page(self, orientation='', format='', same=False):
         """Start a new page, if same page format will be same as previous"""
 
+        # TODO: I do not linke this design of the function modifying the sole current font settings, having to
+        #  save them beforehand and setting them later (twice). Headers and footers should be their own classes
+        #  with their own settings
+
         if self.state == DocumentState.UNSTARTED:
             self.state = DocumentState.OPEN_IDLE
 
-        family = self.settings.font_family
-        if self.settings.underline:
-            style = self.settings.font_style + 'U'
-        else:
-            style = self.settings.font_style
-        size = self.settings.font_size_pt
-        lw = self.settings.line_width
-        dc = self.settings.draw_color
-        fc = self.settings.fill_color
-        tc = self.settings.text_color
-        cf = self.settings.color_flag
-        stretching = self.settings.font_stretching
+        current_font_settings = self.get_font_settings()
 
         if self.current_page > 0:
             self.add_footer()
             self._endpage()
 
-        # Start new page
-        self._beginpage(orientation, format, same)
-        # Set line cap style to square
-        self._out('2 J')
-        # Set line width
-        self.settings.line_width = lw
-        self._out(sprintf('%.2f w', lw * self.settings.scale))
-        # Set font
-        if family:
-            self.set_font(family, style, size)
-        # Set colors
-        self.settings.draw_color = dc
-        if dc != '0 G':
-            self._out(dc)
-        self.settings.fill_color = fc
-        if fc != '0 g':
-            self._out(fc)
-        self.settings.text_color = tc
-        self.settings.color_flag = cf
-        # Page header
+        self._beginpage(orientation, format, same)   # Start new page
+        self._out('2 J')                             # Set line cap style to square
+
+        self.set_font_settings(current_font_settings)
         self.header()
-        # Restore line width
-        if self.settings.line_width != lw:
-            self.settings.line_width = lw
-            self._out(sprintf('%.2f w', lw * self.settings.scale))
-        # Restore font
-        if family:
-            self.set_font(family, style, size)
-        # Restore colors
-        if self.settings.draw_color != dc:
-            self.settings.draw_color = dc
-            self._out(dc)
-        if self.settings.fill_color != fc:
-            self.settings.fill_color = fc
-            self._out(fc)
-        self.settings.text_color = tc
-        self.settings.color_flag = cf
-        # Restore stretching
-        if stretching != 100:
-            self.set_stretching(stretching)
+        self.set_font_settings(current_font_settings)
 
     def header(self):
         """Header to be implemented in your own inherited class"""
