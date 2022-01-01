@@ -228,7 +228,7 @@ class HTML2FPDF(HTMLParser):
                     pass # font not found, ignore
             if 'size' in attrs:
                 size = int(attrs.get('size'))
-                self.pdf.set_font(self.font_face, size=int(size))
+                self.pdf.set_font(self.font_face, font_size=int(size))
                 self.font_size = size
         if tag=='table':
             self.table = dict([(k.lower(), v) for k,v in attrs.items()])

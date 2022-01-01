@@ -13,16 +13,16 @@ class PDFSettings:
         self.keywords = keywords
         self.creator = creator
 
-        self.font_family = ''  # current font family
-        self.font_style = ''  # current font style
-        self.font_size_pt = 12  # current font size in points
+        self.font_family = ''       # current font family
+        self.font_style = ''        # current font style
+        self.font_size_pt = 12      # current font size in points
         self.font_stretching = 100  # current font stretching
-        self.underline = 0  # underlining flag
+        self.underline = False      # underlining flag
         self.draw_color = '0 G'
         self.fill_color = '0 g'
         self.text_color = '0 g'
-        self.color_flag = 0  # indicates whether fill and text colors are different
-        self.word_spacing = 0  # word spacing
+        self.color_flag = False     # indicates whether fill and text colors are different
+        self.word_spacing = 0       # word spacing
         self.angle = 0
 
         self.scale = self.get_units_scale(unit)

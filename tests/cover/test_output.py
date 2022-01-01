@@ -21,7 +21,7 @@ def dotest(outputname, nostamp=True):
     pdf = FPDF(unit="pt")
     pdf._putinfo = lambda: common.test_putinfo(pdf)
     pdf.add_page()
-    pdf.set_font("Times", size=12)
+    pdf.set_font("Times", font_size=12)
     pdf.cell(0, 12, "Dummy content")
     
     # Get the PDF data the usual way via a real file

@@ -189,32 +189,48 @@ class FPDF:
         """Footer to be implemented in your own inherited class"""
         pass
 
-    def set_draw_color(self, r, g=-1, b=-1):
-        """Set color for all stroking operations"""
-        if (r == 0 and g == 0 and b == 0) or g == -1:
-            self.settings.draw_color = sprintf('%.3f G', r / 255.0)
-        else:
-            self.settings.draw_color = sprintf('%.3f %.3f %.3f RG', r / 255.0, g / 255.0, b / 255.0)
-        if (self.current_page > 0):
+    def set_draw_color(self, red=0, green=0, blue=0):
+        """
+        Set color for all stroking operations
+
+        Note: The 'RG' vs 'rg' versions of the color setting string refer to
+        the difference between stroking and non-stroking colors. See:
+        https://stackoverflow.com/questions/27959391/what-is-pdf-stroking-non-stroking-and-filling
+        """
+        rcoord, gcoord, bcoord = red / 255.0, green / 255.0, blue / 255.0
+        self.settings.draw_color = f"{rcoord:.3f} {gcoord:.3f} {bcoord:.3f} RG"
+
+        if self.current_page > 0:
             self._out(self.settings.draw_color)
 
-    def set_fill_color(self, r, g=-1, b=-1):
-        """Set color for all filling operations"""
-        if (r == 0 and g == 0 and b == 0) or g == -1:
-            self.settings.fill_color = sprintf('%.3f g', r / 255.0)
-        else:
-            self.settings.fill_color = sprintf('%.3f %.3f %.3f rg', r / 255.0, g / 255.0, b / 255.0)
-        self.settings.color_flag = (self.settings.fill_color != self.settings.text_color)
-        if (self.current_page > 0):
+    def set_fill_color(self, red=0, green=0, blue=0):
+        """
+        Set color for all filling operations
+
+        Note: The 'RG' vs 'rg' versions of the color setting string refer to
+        the difference between stroking and non-stroking colors. See:
+        https://stackoverflow.com/questions/27959391/what-is-pdf-stroking-non-stroking-and-filling
+        """
+        rcoord, gcoord, bcoord = red / 255.0, green / 255.0, blue / 255.0
+        self.settings.fill_color = f"{rcoord:.3f} {gcoord:.3f} {bcoord:.3f} rg"
+
+        self.settings.color_flag = self.settings.fill_color != self.settings.text_color
+
+        if self.current_page > 0:
             self._out(self.settings.fill_color)
 
-    def set_text_color(self, r, g=-1, b=-1):
-        """Set color for text"""
-        if (r == 0 and g == 0 and b == 0) or g == -1:
-            self.settings.text_color = sprintf('%.3f g', r / 255.0)
-        else:
-            self.settings.text_color = sprintf('%.3f %.3f %.3f rg', r / 255.0, g / 255.0, b / 255.0)
-        self.settings.color_flag = (self.settings.fill_color != self.settings.text_color)
+    def set_text_color(self, red=0, green=0, blue=0):
+        """
+        Set color for text
+
+        Note: The 'RG' vs 'rg' versions of the color setting string refer to
+        the difference between stroking and non-stroking colors. See:
+        https://stackoverflow.com/questions/27959391/what-is-pdf-stroking-non-stroking-and-filling
+        """
+        rcoord, gcoord, bcoord = red / 255.0, green / 255.0, blue / 255.0
+        self.settings.text_color = f"{rcoord:.3f} {gcoord:.3f} {bcoord:.3f} rg"
+
+        self.settings.color_flag = self.settings.fill_color != self.settings.text_color
 
     def get_string_width(self, s, normalized=False):
         """Get width of a string in the current font"""
@@ -430,38 +446,42 @@ class FPDF:
                     self.font_files[filename] = {'length1': font_dict['size1'],
                                                  'length2': font_dict['size2']}
 
-    def set_font(self, family, style='', size=0):
+    def set_font(self, font_family, font_style='', font_size=0):
         """Select a font; size given in points"""
-        family = family.lower()
-        if family == '':
-            family = self.settings.font_family
-        if family == 'arial':
-            family = 'helvetica'
-        elif family == 'symbol' or family == 'zapfdingbats':
-            style = ''
-        style = style.upper()
-        if 'U' in style:
-            self.settings.underline = 1
-            style = style.replace('U', '')
+
+        font_family = font_family.lower()
+        if font_family == '':
+            font_family = self.settings.font_family
+        if font_family == 'arial':
+            font_family = 'helvetica'
+        elif font_family == 'symbol' or font_family == 'zapfdingbats':
+            font_style = ''
+
+        font_style = font_style.upper()
+        if 'U' in font_style:
+            self.settings.underline = True
+            font_style = font_style.replace('U', '')
         else:
-            self.settings.underline = 0
-        if style == 'IB':
-            style = 'BI'
-        if size == 0:
-            size = self.settings.font_size_pt
+            self.settings.underline = False
+        if font_style == 'IB':
+            font_style = 'BI'
+        if font_size == 0:
+            font_size = self.settings.font_size_pt
+
         # Test if font is already selected
-        if self.settings.font_family == family and self.settings.font_style == style and self.settings.font_size_pt == size:
+        if self.settings.font_family == font_family and self.settings.font_style == font_style and self.settings.font_size_pt == font_size:
             return
+
         # Test if used for the first time
-        fontkey = family + style
+        fontkey = font_family + font_style
         if fontkey not in self.fonts:
             # Check if one of the standard fonts
             if fontkey in self.core_fonts:
                 if fontkey not in fpdf_charwidths:
                     # Load metric file
-                    name = os.path.join(FPDF_FONT_DIR, family)
-                    if family == 'times' or family == 'helvetica':
-                        name += style.lower()
+                    name = os.path.join(FPDF_FONT_DIR, font_family)
+                    if font_family == 'times' or font_family == 'helvetica':
+                        name += font_style.lower()
                     with open(name + '.font') as file:
                         exec(compile(file.read(), name + '.font', 'exec'))
                     if fontkey not in fpdf_charwidths:
@@ -469,12 +489,12 @@ class FPDF:
                 i = len(self.fonts) + 1
                 self.fonts[fontkey] = {'i': i, 'type': 'core', 'name': self.core_fonts[fontkey], 'up': -100, 'ut': 50, 'cw': fpdf_charwidths[fontkey]}
             else:
-                raise CatchAllError('Undefined font: ' + family + ' ' + style)
+                raise CatchAllError('Undefined font: ' + font_family + ' ' + font_style)
         # Select it
-        self.settings.font_family = family
-        self.settings.font_style = style
-        self.settings.font_size_pt = size
-        self.font_size = size / self.settings.scale
+        self.settings.font_family = font_family
+        self.settings.font_style = font_style
+        self.settings.font_size_pt = font_size
+        self.font_size = font_size / self.settings.scale
         self.current_font = self.fonts[fontkey]
         self.unifontsubset = (self.fonts[fontkey]['type'] == 'TTF')
         if self.current_page > 0:
@@ -539,7 +559,7 @@ class FPDF:
         if x is None:
             x = self.x
         if y is None:
-            y = self.y;
+            y = self.y
         if self.settings.angle != 0:
             self._out('Q')
         self.settings.angle = angle
@@ -976,18 +996,31 @@ class FPDF:
         else:
             raise CatchAllError('Incorrect output destination: ' + dest)
 
+    # def normalize_text(self, txt):
+    #     """Check that text input is in the correct format/encoding"""
+    #     # - for TTF unicode fonts: unicode object (utf8 encoding)
+    #     # - for built-in fonts: string instances (encoding: latin-1, cp1252)
+    #     if not PY3K:
+    #         if self.unifontsubset and isinstance(txt, str):
+    #             return txt.decode("utf-8")
+    #         elif not self.unifontsubset and isinstance(txt, unicode):
+    #             return txt.encode(self.settings.core_fonts_encoding)
+    #     else:
+    #         if not self.unifontsubset and self.settings.core_fonts_encoding:
+    #             return txt.encode(self.settings.core_fonts_encoding).decode("latin-1")
+    #     return txt
+
     def normalize_text(self, txt):
+        # NOTE: The original method normalize_text above is replaced by the current
+        # one. I intend to remove the complexity associated to supporing Python2
+
         """Check that text input is in the correct format/encoding"""
         # - for TTF unicode fonts: unicode object (utf8 encoding)
         # - for built-in fonts: string instances (encoding: latin-1, cp1252)
-        if not PY3K:
-            if self.unifontsubset and isinstance(txt, str):
-                return txt.decode("utf-8")
-            elif not self.unifontsubset and isinstance(txt, unicode):
-                return txt.encode(self.settings.core_fonts_encoding)
-        else:
-            if not self.unifontsubset and self.settings.core_fonts_encoding:
-                return txt.encode(self.settings.core_fonts_encoding).decode("latin-1")
+
+        if not self.unifontsubset and self.settings.core_fonts_encoding:
+            return txt.encode(self.settings.core_fonts_encoding).decode("latin-1")
+
         return txt
 
     def _dochecks(self):
@@ -1247,8 +1280,8 @@ class FPDF:
                 for kd in ('Ascent', 'Descent', 'CapHeight', 'Flags', 'FontBBox', 'ItalicAngle', 'StemV', 'MissingWidth'):
                     v = font['desc'][kd]
                     if kd == 'Flags':
-                        v = v | 4;
-                        v = v & ~32;  # SYMBOLIC font flag
+                        v = v | 4
+                        v = v & ~32  # SYMBOLIC font flag
                     self._out(' /%s %s' % (kd, v))
                 self._out('/FontFile2 ' + str(self.n + 2) + ' 0 R')
                 self._out('>>')
@@ -1425,7 +1458,7 @@ class FPDF:
                     trns += str(info['trns'][i]) + ' ' + str(info['trns'][i]) + ' '
                 self._out('/Mask [' + trns + ']')
             if 'smask' in info:
-                self._out('/SMask ' + str(self.n + 1) + ' 0 R');
+                self._out('/SMask ' + str(self.n + 1) + ' 0 R')
             self._out('/Length ' + str(len(info['data'])) + '>>')
             self._putstream(info['data'])
             self._out('endobj')
