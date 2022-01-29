@@ -126,8 +126,6 @@ class FPDF:
 
         self.settings = PDFSettings(orientation=orientation, unit=unit, format=format)
 
-
-
     def close(self):
         """Terminate document"""
         if self.state == DocumentState.TERMINATED:
@@ -1606,7 +1604,29 @@ class FPDF:
         self._out('%%EOF')
         self.state = DocumentState.TERMINATED
 
-    def _beginpage(self, orientation, format, same):
+    def set_page_format(self, page_format):
+        if page_format:
+            # Change page format
+            self.settings.file_width_points, self.settings.file_height_points = get_page_dimensions(page_format, self.settings.scale)
+        else:
+            # Set to default format
+            self.settings.file_width_points, self.settings.file_height_points = self.settings.document_width_points, self.settings.document_height_points
+
+    def set_page_orientation(self, page_orientation):
+        if not page_orientation:
+            orientation = self.settings.def_orientation
+        else:
+            orientation = page_orientation[0].upper()
+
+        if orientation == 'P':
+            self.settings.width_points = self.settings.file_width_points
+            self.settings.height_points = self.settings.file_height_points
+        else:
+            self.settings.width_points = self.settings.file_height_points
+            self.settings.height_points = self.settings.file_width_points
+
+    def _beginpage(self, page_orientation, page_format, same):
+
         self.current_page += 1
         self.pages[self.current_page] = {"content": ""}
         self.state = DocumentState.WRITING_PAGE
@@ -1614,33 +1634,16 @@ class FPDF:
         self.y = self.settings.top_page_margin
         self.settings.font_family = ''
         self.settings.font_stretching = 100
+
         if not same:
-            # Page format
-            if format:
-                # Change page format
-                self.settings.file_width_points, self.file_height_points = get_page_dimensions(format, self.settings.scale)
-            else:
-                # Set to default format
-                self.settings.file_width_points = self.settings.document_width_points
-                self.file_height_points = self.settings.document_height_points
-            self.settings.file_width_unit = self.settings.file_width_points / self.settings.scale
-            self.settings.file_height_unit = self.file_height_points / self.settings.scale
-            # Page orientation
-            if not orientation:
-                orientation = self.settings.def_orientation
-            else:
-                orientation = orientation[0].upper()
-            if orientation == 'P':
-                self.settings.width_points = self.settings.file_width_points
-                self.height_points = self.file_height_points
-            else:
-                self.settings.width_points = self.file_height_points
-                self.height_points = self.settings.file_width_points
+            self.set_page_format(page_format)
+            self.set_page_orientation(page_orientation)
             self.settings.width_unit = self.settings.width_points / self.settings.scale
-            self.settings.height_unit = self.height_points / self.settings.scale
+            self.settings.height_unit = self.settings.height_points / self.settings.scale
             self.settings.page_break_trigger = self.settings.height_unit - self.settings.bottom_page_margin
+
         self.pages[self.current_page]["w_pt"] = self.settings.width_points
-        self.pages[self.current_page]["h_pt"] = self.height_points
+        self.pages[self.current_page]["h_pt"] = self.settings.height_points
 
     def _endpage(self):
         # End of page contents
