@@ -44,8 +44,6 @@ def get_page_dimensions(format: str, scale: float):
 
 def load_cache(filename):
     """Return unpickled object, or None if cache unavailable"""
-    if not filename:
-        return None
     try:
         with open(filename, "rb") as fh:
             return pickle.load(fh)

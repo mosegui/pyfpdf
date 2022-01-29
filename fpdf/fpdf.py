@@ -68,6 +68,26 @@ class FontSettings:
             self.font_style += 'U'
 
 
+def get_font_ttf_filepath(font_name):
+    if os.path.exists(font_name):
+        return font_name
+    elif FPDF_FONT_DIR and os.path.exists(os.path.join(FPDF_FONT_DIR, font_name)):
+        return os.path.join(FPDF_FONT_DIR, font_name)
+    elif SYSTEM_TTFONTS and os.path.exists(os.path.join(SYSTEM_TTFONTS, font_name)):
+        return os.path.join(SYSTEM_TTFONTS, font_name)
+    else:
+        raise RuntimeError(f"TTF Font file not found: {font_name}")
+
+
+def get_unifilename(ttf_file_path):
+    if FPDF_CACHE_MODE == 0:
+        return os.path.splitext(ttf_file_path)[0] + '.pkl'
+    elif FPDF_CACHE_MODE == 2:
+        return os.path.join(FPDF_CACHE_DIR, hashpath(ttf_file_path) + ".pkl")
+    else:
+        return None
+
+
 class FPDF:
     pdf_version = "1.3"
 
@@ -83,6 +103,7 @@ class FPDF:
     }
 
     in_footer = False  # flag set when processing footer
+    str_alias_nb_pages = "{nb}"
 
     def __init__(self, orientation='P', unit='mm', format='A4'):
         # Some checks
@@ -104,6 +125,8 @@ class FPDF:
         self.lasth = 0  # height of last cell printed
 
         self.settings = PDFSettings(orientation=orientation, unit=unit, format=format)
+
+
 
     def close(self):
         """Terminate document"""
@@ -244,7 +267,7 @@ class FPDF:
                 char = ord(char)
                 if len(cw) > char:
                     w += cw[char]  # ord(cw[2*char])<<8 + ord(cw[2*char+1])
-                # elif (char>0 and char<128 and isset($cw[chr($char)])) { $w += $cw[chr($char)]; }
+                # elif char>0 and char<128 and isset($cw[chr($char)]) { $w += $cw[chr($char)]; }
                 elif self.current_font['desc']['MissingWidth']:
                     w += self.current_font['desc']['MissingWidth']
                 # elif (isset($this->CurrentFont['MissingWidth'])) { $w += $this->CurrentFont['MissingWidth']; }
@@ -269,7 +292,7 @@ class FPDF:
         self._out(
             sprintf('%.2f %.2f m %.2f %.2f l S', x1 * self.settings.scale, (self.settings.height_unit - y1) * self.settings.scale, x2 * self.settings.scale, (self.settings.height_unit - y2) * self.settings.scale))
 
-    def _set_dash(self, dash_length=False, space_length=False):
+    def _set_dash(self, dash_length=1, space_length=1):
         if dash_length and space_length:
             s = sprintf('[%.3f %.3f] 0 d', dash_length * self.settings.scale, space_length * self.settings.scale)
         else:
@@ -333,43 +356,31 @@ class FPDF:
                           (cx + rx) * self.settings.scale, (self.settings.height_unit - cy) * self.settings.scale,
                           op))
 
-    def add_font(self, family, style='', fname='', uni=False):
+    def add_font(self, font_family, font_style='', font_name='', uni=False):
         """Add a TrueType or Type1 font"""
-        family = family.lower()
-        if fname == '':
-            fname = family.replace(' ', '') + style.lower() + '.pkl'
-        if family == 'arial':
-            family = 'helvetica'
-        style = style.upper()
-        if style == 'IB':
-            style = 'BI'
-        fontkey = family + style
-        if fontkey in self.fonts:
+        font_family = font_family.lower()
+        if font_name == '':
+            font_name = font_family.replace(' ', '') + font_style.lower() + '.pkl'
+        if font_family == 'arial':
+            font_family = 'helvetica'
+        font_style = font_style.upper()
+        if font_style == 'IB':
+            font_style = 'BI'
+        font_key = font_family + font_style
+        if font_key in self.fonts:
             # Font already added!
             return
+
         if uni:
-            global SYSTEM_TTFONTS, FPDF_CACHE_MODE, FPDF_CACHE_DIR
-            if os.path.exists(fname):
-                ttffilename = fname
-            elif (FPDF_FONT_DIR and
-                  os.path.exists(os.path.join(FPDF_FONT_DIR, fname))):
-                ttffilename = os.path.join(FPDF_FONT_DIR, fname)
-            elif (SYSTEM_TTFONTS and
-                  os.path.exists(os.path.join(SYSTEM_TTFONTS, fname))):
-                ttffilename = os.path.join(SYSTEM_TTFONTS, fname)
-            else:
-                raise RuntimeError("TTF Font file not found: %s" % fname)
-            name = ''
-            if FPDF_CACHE_MODE == 0:
-                unifilename = os.path.splitext(ttffilename)[0] + '.pkl'
-            elif FPDF_CACHE_MODE == 2:
-                unifilename = os.path.join(FPDF_CACHE_DIR, hashpath(ttffilename) + ".pkl")
-            else:
-                unifilename = None
+            ttffilename = get_font_ttf_filepath(font_name)
+            unifilename = get_unifilename(ttffilename)
+
             font_dict = load_cache(unifilename)
+
             if font_dict is None:
                 ttf = TTFontFile()
                 ttf.getMetrics(ttffilename)
+
                 desc = {
                     'Ascent': int(round(ttf.ascent, 0)),
                     'Descent': int(round(ttf.descent, 0)),
@@ -384,6 +395,7 @@ class FPDF:
                     'StemV': int(round(ttf.stemV, 0)),
                     'MissingWidth': int(round(ttf.defaultWidth, 0)),
                 }
+
                 # Generate metrics .pkl file
                 font_dict = {
                     'name': re.sub('[ ()]', '', ttf.fullName),
@@ -392,7 +404,7 @@ class FPDF:
                     'up': round(ttf.underlinePosition),
                     'ut': round(ttf.underlineThickness),
                     'ttffile': ttffilename,
-                    'fontkey': fontkey,
+                    'fontkey': font_key,
                     'originalsize': os.stat(ttffilename).st_size,
                     'cw': ttf.charWidths,
                 }
@@ -400,30 +412,42 @@ class FPDF:
                     try:
                         with open(unifilename, "wb") as fh:
                             pickle.dump(font_dict, fh)
-                    except IOError:
-                        if not exception().errno == errno.EACCES:
-                            raise  # Not a permission error.
-                del ttf
+                    except Exception:
+                        # Improve error catching with proper testing
+                        raise Exception("Some unspecific error")
+
             if hasattr(self, 'str_alias_nb_pages'):
                 sbarr = list(range(0, 57))  # include numbers in the subset!
             else:
                 sbarr = list(range(0, 32))
-            self.fonts[fontkey] = {
-                'i': len(self.fonts) + 1, 'type': font_dict['type'],
-                'name': font_dict['name'], 'desc': font_dict['desc'],
-                'up': font_dict['up'], 'ut': font_dict['ut'],
+
+            self.fonts[font_key] = {
+                'i': len(self.fonts) + 1,
+                'type': font_dict['type'],
+                'name': font_dict['name'],
+                'desc': font_dict['desc'],
+                'up': font_dict['up'],
+                'ut': font_dict['ut'],
                 'cw': font_dict['cw'],
-                'ttffile': font_dict['ttffile'], 'fontkey': fontkey,
-                'subset': sbarr, 'unifilename': unifilename,
+                'ttffile': font_dict['ttffile'],
+                'fontkey': font_key,
+                'subset': sbarr,
+                'unifilename': unifilename,
             }
-            self.font_files[fontkey] = {'length1': font_dict['originalsize'],
-                                        'type': "TTF", 'ttffile': ttffilename}
-            self.font_files[fname] = {'type': "TTF"}
+
+            self.font_files[font_key] = {
+                'length1': font_dict['originalsize'],
+                'type': "TTF",
+                'ttffile': ttffilename
+            }
+
+            self.font_files[font_name] = {'type': "TTF"}
+
         else:
-            with open(fname, 'rb') as fontfile:
+            with open(font_name, 'rb') as fontfile:
                 font_dict = pickle.load(fontfile)
-            self.fonts[fontkey] = {'i': len(self.fonts) + 1}
-            self.fonts[fontkey].update(font_dict)
+            self.fonts[font_key] = {'i': len(self.fonts) + 1}
+            self.fonts[font_key].update(font_dict)
             diff = font_dict.get('diff')
             if diff:
                 # Search existing encodings
@@ -436,7 +460,7 @@ class FPDF:
                 if d == 0:
                     d = nb + 1
                     self.diffs[d] = diff
-                self.fonts[fontkey]['diff'] = d
+                self.fonts[font_key]['diff'] = d
             filename = font_dict.get('filename')
             if filename:
                 if font_dict['type'] == 'TrueType':
