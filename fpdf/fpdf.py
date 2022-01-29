@@ -27,7 +27,7 @@ from contextlib import contextmanager
 
 from .ttfonts import TTFontFile
 from .fonts import fpdf_charwidths
-from .php import substr, sprintf, UTF8ToUTF16BE, UTF8StringToArray
+from .php import substr, UTF8ToUTF16BE, UTF8StringToArray
 from .py3k import PY3K, pickle, urlopen, BytesIO, Image, basestring, unicode, exception, b, hashpath
 
 from .helpers import get_page_dimensions, load_cache, CatchAllError, check_page
@@ -156,7 +156,7 @@ class FPDF:
 
         # Restore line width
         self.settings.line_width = font_settings.line_width
-        self._out(sprintf('%.2f w', self.settings.line_width * self.settings.scale))
+        self._out(f"{self.settings.line_width * self.settings.scale:.2f} w")
 
         # Restore font
         if font_settings.font_family:
@@ -284,20 +284,23 @@ class FPDF:
         """Set line width"""
         self.settings.line_width = width
         if self.current_page > 0:
-            self._out(sprintf('%.2f w', width * self.settings.scale))
+            self._out(f"{width * self.settings.scale:.2f} w")
 
     @check_page
     def line(self, x1, y1, x2, y2):
         """Draw a line"""
         self._out(
-            sprintf('%.2f %.2f m %.2f %.2f l S', x1 * self.settings.scale, (self.settings.height_unit - y1) * self.settings.scale, x2 * self.settings.scale, (self.settings.height_unit - y2) * self.settings.scale))
+            f"{x1 * self.settings.scale:.2f} "
+            f"{(self.settings.height_unit - y1) * self.settings.scale:.2f} m "
+            f"{x2 * self.settings.scale:.2f} "
+            f"{(self.settings.height_unit - y2) * self.settings.scale:.2f} l S"
+        )
 
     def _set_dash(self, dash_length=1, space_length=1):
         if dash_length and space_length:
-            s = sprintf('[%.3f %.3f] 0 d', dash_length * self.settings.scale, space_length * self.settings.scale)
+            self._out(f"[{dash_length * self.settings.scale:.3f} {space_length * self.settings.scale:.3f}] 0 d")
         else:
-            s = '[] 0 d'
-        self._out(s)
+            self._out('[] 0 d')
 
     @check_page
     def dashed_line(self, x1, y1, x2, y2, dash_length=1, space_length=1):
@@ -317,7 +320,8 @@ class FPDF:
             op = 'B'
         else:
             op = 'S'
-        self._out(sprintf('%.2f %.2f %.2f %.2f re %s', x * self.settings.scale, (self.settings.height_unit - y) * self.settings.scale, w * self.settings.scale, -h * self.settings.scale, op))
+
+        self._out(f"{x * self.settings.scale:.2f} {(self.settings.height_unit - y) * self.settings.scale:.2f} {w * self.settings.scale:.2f} {-h * self.settings.scale:.2f} re {op}")
 
     @check_page
     def ellipse(self, x, y, w, h, style=''):
@@ -337,24 +341,36 @@ class FPDF:
         lx = 4.0 / 3.0 * (math.sqrt(2) - 1) * rx
         ly = 4.0 / 3.0 * (math.sqrt(2) - 1) * ry
 
-        self._out(sprintf('%.2f %.2f m %.2f %.2f %.2f %.2f %.2f %.2f c',
-                          (cx + rx) * self.settings.scale, (self.settings.height_unit - cy) * self.settings.scale,
-                          (cx + rx) * self.settings.scale, (self.settings.height_unit - (cy - ly)) * self.settings.scale,
-                          (cx + lx) * self.settings.scale, (self.settings.height_unit - (cy - ry)) * self.settings.scale,
-                          cx * self.settings.scale, (self.settings.height_unit - (cy - ry)) * self.settings.scale))
-        self._out(sprintf('%.2f %.2f %.2f %.2f %.2f %.2f c',
-                          (cx - lx) * self.settings.scale, (self.settings.height_unit - (cy - ry)) * self.settings.scale,
-                          (cx - rx) * self.settings.scale, (self.settings.height_unit - (cy - ly)) * self.settings.scale,
-                          (cx - rx) * self.settings.scale, (self.settings.height_unit - cy) * self.settings.scale))
-        self._out(sprintf('%.2f %.2f %.2f %.2f %.2f %.2f c',
-                          (cx - rx) * self.settings.scale, (self.settings.height_unit - (cy + ly)) * self.settings.scale,
-                          (cx - lx) * self.settings.scale, (self.settings.height_unit - (cy + ry)) * self.settings.scale,
-                          cx * self.settings.scale, (self.settings.height_unit - (cy + ry)) * self.settings.scale))
-        self._out(sprintf('%.2f %.2f %.2f %.2f %.2f %.2f c %s',
-                          (cx + lx) * self.settings.scale, (self.settings.height_unit - (cy + ry)) * self.settings.scale,
-                          (cx + rx) * self.settings.scale, (self.settings.height_unit - (cy + ly)) * self.settings.scale,
-                          (cx + rx) * self.settings.scale, (self.settings.height_unit - cy) * self.settings.scale,
-                          op))
+        self._out(f"{(cx + rx) * self.settings.scale:.2f} "
+                  f"{(self.settings.height_unit - cy) * self.settings.scale:.2f} m "
+                  f"{(cx + rx) * self.settings.scale:.2f} "
+                  f"{(self.settings.height_unit - (cy - ly)) * self.settings.scale:.2f} "
+                  f"{(cx + lx) * self.settings.scale:.2f} "
+                  f"{(self.settings.height_unit - (cy - ry)) * self.settings.scale:.2f} "
+                  f"{cx * self.settings.scale:.2f} "
+                  f"{(self.settings.height_unit - (cy - ry)) * self.settings.scale:.2f} c")
+
+        self._out(f"{(cx - lx) * self.settings.scale:.2f} "
+                  f"{(self.settings.height_unit - (cy - ry)) * self.settings.scale:.2f} "
+                  f"{(cx - rx) * self.settings.scale:.2f} "
+                  f"{(self.settings.height_unit - (cy - ly)) * self.settings.scale:.2f} "
+                  f"{(cx - rx) * self.settings.scale:.2f} "
+                  f"{(self.settings.height_unit - cy) * self.settings.scale:.2f} c")
+
+        self._out(f"{(cx - rx) * self.settings.scale:.2f} "
+                  f"{(self.settings.height_unit - (cy + ly)) * self.settings.scale:.2f} "
+                  f"{(cx - lx) * self.settings.scale:.2f} "
+                  f"{(self.settings.height_unit - (cy + ry)) * self.settings.scale:.2f} "
+                  f"{cx * self.settings.scale:.2f} "
+                  f"{(self.settings.height_unit - (cy + ry)) * self.settings.scale:.2f} c")
+
+        self._out(f"{(cx + lx) * self.settings.scale:.2f} "
+                  f"{(self.settings.height_unit - (cy + ry)) * self.settings.scale:.2f} "
+                  f"{(cx + rx) * self.settings.scale:.2f} "
+                  f"{(self.settings.height_unit - (cy + ly)) * self.settings.scale:.2f} "
+                  f"{(cx + rx) * self.settings.scale:.2f} "
+                  f"{(self.settings.height_unit - cy) * self.settings.scale:.2f} c"
+                  f"{op}")
 
     def add_font(self, font_family, font_style='', font_name='', uni=False):
         """Add a TrueType or Type1 font"""
@@ -522,7 +538,7 @@ class FPDF:
         self.current_font = self.fonts[fontkey]
         self.unifontsubset = (self.fonts[fontkey]['type'] == 'TTF')
         if self.current_page > 0:
-            self._out(sprintf('BT /F%d %.2f Tf ET', self.current_font['i'], self.settings.font_size_pt))
+            self._out(f"BT /F{self.current_font['i']:d} {self.settings.font_size_pt:.2f} Tf ET")
 
     def set_font_size(self, size):
         """Set font size in points"""
@@ -531,7 +547,7 @@ class FPDF:
         self.settings.font_size_pt = size
         self.font_size = size / self.settings.scale
         if self.current_page > 0:
-            self._out(sprintf('BT /F%d %.2f Tf ET', self.current_font['i'], self.settings.font_size_pt))
+            self._out(f"BT /F{self.current_font['i']:d} {self.settings.font_size_pt:.2f} Tf ET")
 
     def set_stretching(self, factor):
         """Set from stretch factor percents (default: 100.0)"""
@@ -539,7 +555,7 @@ class FPDF:
             return
         self.settings.font_stretching = factor
         if self.current_page > 0:
-            self._out(sprintf('BT %.2f Tz ET', self.settings.font_stretching))
+            self._out(f"BT {self.settings.font_stretching:.2f} Tz ET")
 
     def add_link(self):
         """Create a new internal link"""
@@ -559,7 +575,7 @@ class FPDF:
         """Put a link on the page"""
         if not self.current_page in self.page_links:
             self.page_links[self.current_page] = []
-        self.page_links[self.current_page] += [(x * self.settings.scale, self.height_points - y * self.settings.scale, w * self.settings.scale, h * self.settings.scale, link), ]
+        self.page_links[self.current_page] += [(x * self.settings.scale, self.settings.height_points - y * self.settings.scale, w * self.settings.scale, h * self.settings.scale, link), ]
 
     @check_page
     def text(self, x, y, txt=''):
@@ -571,7 +587,7 @@ class FPDF:
                 self.current_font['subset'].append(uni)
         else:
             txt2 = self._escape(txt)
-        s = sprintf('BT %.2f %.2f Td (%s) Tj ET', x * self.settings.scale, (self.settings.height_unit - y) * self.settings.scale, txt2)
+        s = f"BT {x * self.settings.scale:.2f} {(self.settings.height_unit - y) * self.settings.scale:.2f} Td ({txt2}) Tj ET"
         if self.settings.underline and txt != '':
             s += ' ' + self._dounderline(x, y, txt)
         if self.settings.color_flag:
@@ -593,8 +609,7 @@ class FPDF:
             s = math.sin(angle)
             cx = x * self.settings.scale
             cy = (self.settings.height_unit - y) * self.settings.scale
-            s = sprintf('q %.5F %.5F %.5F %.5F %.2F %.2F cm 1 0 0 1 %.2F %.2F cm', c, s, -s, c, cx, cy, -cx, -cy)
-            self._out(s)
+            self._out(f"q {c:.5f} {s:.5f} {-s:.5f} {c:.5f} {cx:.2f} {cy:.2f} cm 1 0 0 1 {-cx:.2f} {-cy:.2f} cm")
 
     @check_page
     def cell(self, w, h=0, txt='', border=0, ln=0, align='', fill=0, link=''):
@@ -612,7 +627,7 @@ class FPDF:
             self.x = x
             if ws > 0:
                 self.settings.word_spacing = ws
-                self._out(sprintf('%.3f Tw', ws * k))
+                self._out(f'{ws * k:.3f} Tw')
         if w == 0:
             w = self.settings.width_unit - self.settings.right_page_margin - self.x
         s = ''
@@ -624,18 +639,18 @@ class FPDF:
                     op = 'f'
             else:
                 op = 'S'
-            s = sprintf('%.2f %.2f %.2f %.2f re %s ', self.x * k, (self.settings.height_unit - self.y) * k, w * k, -h * k, op)
+            s = f"{self.x * k:.2f} {(self.settings.height_unit - self.y) * k:.2f} {w * k:.2f} {-h * k:.2f} re {op} "
         if isinstance(border, basestring):
             x = self.x
             y = self.y
             if 'L' in border:
-                s += sprintf('%.2f %.2f m %.2f %.2f l S ', x * k, (self.settings.height_unit - y) * k, x * k, (self.settings.height_unit - (y + h)) * k)
+                s += f'{x * k:.2f} {(self.settings.height_unit - y) * k:.2f} m {x * k:.2f} {(self.settings.height_unit - (y + h)) * k:.2f} l S '
             if 'T' in border:
-                s += sprintf('%.2f %.2f m %.2f %.2f l S ', x * k, (self.settings.height_unit - y) * k, (x + w) * k, (self.settings.height_unit - y) * k)
+                s += f'{x * k:.2f} {(self.settings.height_unit - y) * k:.2f} m {(x + w) * k:.2f} {(self.settings.height_unit - y) * k:.2f} l S '
             if 'R' in border:
-                s += sprintf('%.2f %.2f m %.2f %.2f l S ', (x + w) * k, (self.settings.height_unit - y) * k, (x + w) * k, (self.settings.height_unit - (y + h)) * k)
+                s += f'{(x + w) * k:.2f} {(self.settings.height_unit - y) * k:.2f} m {(x + w) * k:.2f} {(self.settings.height_unit - (y + h)) * k:.2f} l S '
             if 'B' in border:
-                s += sprintf('%.2f %.2f m %.2f %.2f l S ', x * k, (self.settings.height_unit - (y + h)) * k, (x + w) * k, (self.settings.height_unit - (y + h)) * k)
+                s += f'{x * k:.2f} {(self.settings.height_unit - (y + h)) * k:.2f} m {(x + w) * k:.2f} {(self.settings.height_unit - (y + h)) * k:.2f} l S '
         if txt != '':
             if align == 'R':
                 dx = w - self.settings.cell_margin - self.get_string_width(txt, True)
@@ -651,16 +666,16 @@ class FPDF:
                 for uni in UTF8StringToArray(txt):
                     self.current_font['subset'].append(uni)
                 space = self._escape(UTF8ToUTF16BE(' ', False))
-                s += sprintf('BT 0 Tw %.2F %.2F Td [', (self.x + dx) * k, (self.settings.height_unit - (self.y + 0.5 * h + 0.3 * self.font_size)) * k)
+                s += f'BT 0 Tw {(self.x + dx) * k:.2f} {(self.settings.height_unit - (self.y + 0.5 * h + 0.3 * self.font_size)) * k:.2f} Td ['
                 t = txt.split(' ')
                 numt = len(t)
                 for i in range(numt):
                     tx = t[i]
                     tx = '(' + self._escape(UTF8ToUTF16BE(tx, False)) + ')'
-                    s += sprintf('%s ', tx)
+                    s += f'{tx} '
                     if (i + 1) < numt:
                         adj = -(self.settings.word_spacing * self.settings.scale) * 1000 / self.settings.font_size_pt
-                        s += sprintf('%d(%s) ', adj, space)
+                        s += f'{adj:d}({space}) '
                 s += '] TJ'
                 s += ' ET'
             else:
@@ -670,7 +685,7 @@ class FPDF:
                         self.current_font['subset'].append(uni)
                 else:
                     txt2 = self._escape(txt)
-                s += sprintf('BT %.2f %.2f Td (%s) Tj ET', (self.x + dx) * k, (self.settings.height_unit - (self.y + .5 * h + .3 * self.font_size)) * k, txt2)
+                s += f'BT {(self.x + dx) * k:.2f} {(self.settings.height_unit - (self.y + .5 * h + .3 * self.font_size)) * k:.2f} Td ({txt2}) Tj ET'
 
             if self.settings.underline:
                 s += ' ' + self._dounderline(self.x + dx, self.y + .5 * h + .3 * self.font_size, txt)
@@ -774,7 +789,7 @@ class FPDF:
                         else:
                             self.settings.word_spacing = 0
                         if not split_only:
-                            self._out(sprintf('%.3f Tw', self.settings.word_spacing * self.settings.scale))
+                            self._out(f'{self.settings.word_spacing * self.settings.scale:.3f} Tw', )
                     if not split_only:
                         self.cell(width, height, substr(s, j, sep - j), b, 2, align, fill)
                     else:
@@ -940,9 +955,7 @@ class FPDF:
         if x is None:
             x = self.x
         if not is_mask:
-            self._out(
-                sprintf('q %.2f 0 0 %.2f %.2f %.2f cm /I%d Do Q', w * self.settings.scale, h * self.settings.scale, x * self.settings.scale, (self.settings.height_unit - (y + h)) * self.settings.scale,
-                        info['i']))
+            self._out(f"q {w * self.settings.scale:.2f} 0 0 {h * self.settings.scale:.2f} {x * self.settings.scale:.2f} {(self.settings.height_unit - (y + h)) * self.settings.scale:.2f} cm /I{info['i']:d} Do Q")
         if link:
             self.link(x, y, w, h, link)
 
@@ -1052,7 +1065,7 @@ class FPDF:
         #        if(1.1==1):
         #            raise CatchAllError("Don\'t alter the locale before including class file");
         # Check for decimal separator
-        if sprintf('%.1f', 1.0) != '1.0':
+        if f'{1.0:.1f}' != '1.0':
             import locale
             locale.setlocale(locale.LC_NUMERIC, 'C')
 
@@ -1088,16 +1101,14 @@ class FPDF:
                 w_pt = self.pages[n]["w_pt"]
                 h_pt = self.pages[n]["h_pt"]
                 if w_pt != dw_pt or h_pt != dh_pt:
-                    self._out(sprintf('/MediaBox [0 0 %.2f %.2f]', w_pt, h_pt))
+                    self._out(f'/MediaBox [0 0 {w_pt:.2f} {h_pt:.2f}]')
                 self._out('/Resources 2 0 R')
                 if self.page_links and n in self.page_links:
                     # Links
                     annots = '/Annots ['
                     for pl in self.page_links[n]:
-                        rect = sprintf('%.2f %.2f %.2f %.2f', pl[0], pl[1],
-                                       pl[0] + pl[2], pl[1] - pl[3])
-                        annots += '<</Type /Annot /Subtype /Link /Rect [' + \
-                                  rect + '] /Border [0 0 0] '
+                        rect = f'{pl[0]:.2f} {pl[1]:.2f} {pl[0] + pl[2]:.2f} {pl[1] - pl[3]:.2f}'
+                        annots += '<</Type /Annot /Subtype /Link /Rect [' + rect + '] /Border [0 0 0] '
                         if isinstance(pl[4], basestring):
                             annots += '/A <</S /URI /URI ' + \
                                       self._textstring(pl[4]) + '>>>>'
@@ -1107,7 +1118,7 @@ class FPDF:
                                 h = w_pt
                             else:
                                 h = h_pt
-                            annots += sprintf('/Dest [%d 0 R /XYZ 0 %.2f null]>>', 1 + 2 * l[0], h - l[1] * self.settings.scale)
+                            annots += f'/Dest [{1 + 2 * l[0]:d} 0 R /XYZ 0 {h - l[1] * self.settings.scale:.2f} null]>>'
                     self._out(annots + ']')
                 if self.pdf_version > '1.3':
                     self._out("/Group <</Type /Group /S /Transparency /CS /DeviceRGB>>")
@@ -1134,7 +1145,7 @@ class FPDF:
             kids += str(3 + 2 * i) + ' 0 R '
         self._out(kids + ']')
         self._out('/Count ' + str(nb))
-        self._out(sprintf('/MediaBox [0 0 %.2f %.2f]', dw_pt, dh_pt))
+        self._out(f'/MediaBox [0 0 {dw_pt:.2f} {dh_pt:.2f}]')
         self._out('>>')
         self._out('endobj')
 
@@ -1549,7 +1560,7 @@ class FPDF:
         elif self.settings.zoom_mode == 'real':
             self._out('/OpenAction [3 0 R /XYZ null null 1]')
         elif not isinstance(self.settings.zoom_mode, basestring):
-            self._out(sprintf('/OpenAction [3 0 R /XYZ null null %s]', self.settings.zoom_mode / 100))
+            self._out(f'/OpenAction [3 0 R /XYZ null null {self.settings.zoom_mode / 100}]')
 
         if self.settings.layout_mode == 'single':
             self._out('/PageLayout /SinglePage')
@@ -1588,7 +1599,7 @@ class FPDF:
         self._out('0 ' + (str(self.n + 1)))
         self._out('0000000000 65535 f ')
         for i in range(1, self.n + 1):
-            self._out(sprintf('%010d 00000 n ', self.offsets[i]))
+            self._out(f'{self.offsets[i]:010d} 00000 n ', )
         # Trailer
         self._out('trailer')
         self._out('<<')
@@ -1657,8 +1668,11 @@ class FPDF:
         up = self.current_font['up']
         ut = self.current_font['ut']
         w = self.get_string_width(txt, True) + self.settings.word_spacing * txt.count(' ')
-        return sprintf('%.2f %.2f %.2f %.2f re f', x * self.settings.scale, (self.settings.height_unit - (y - up / 1000.0 * self.font_size)) * self.settings.scale, w * self.settings.scale,
-                       -ut / 1000.0 * self.settings.font_size_pt)
+        return f'{x * self.settings.scale:.2f} ' \
+               f'{(self.settings.height_unit - (y - up / 1000.0 * self.font_size)) * self.settings.scale:.2f} ' \
+               f'{w * self.settings.scale:.2f} ' \
+               f'{-ut / 1000.0 * self.settings.font_size_pt:.2f} ' \
+               f're f'
 
     def load_resource(self, reason, filename):
         """Load external file"""
