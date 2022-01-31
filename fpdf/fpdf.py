@@ -17,7 +17,6 @@ from __future__ import division, with_statement
 
 from enum import Enum
 
-from abc import abstractmethod
 from datetime import datetime
 import math
 import errno
@@ -311,28 +310,31 @@ class FPDF:
         self.line(x1, y1, x2, y2)
         self._set_dash()
 
+    def get_op_from_draw_style(self, drawing_style):
+
+        DrawingStyles = {
+            "F": "f",
+            "D": "S",
+            "FD": "B",
+            "DF": "B"
+        }
+
+        if drawing_style in DrawingStyles.keys():
+            return DrawingStyles.get(drawing_style)
+        return 'S'
+
     @check_page
-    def rect(self, x, y, w, h, style=''):
+    def rect(self, x, y, w, h, drawing_style=''):
         """Draw a rectangle"""
-        if style == 'F':
-            op = 'f'
-        elif style == 'FD' or style == 'DF':
-            op = 'B'
-        else:
-            op = 'S'
 
-        self._out(f"{x * self.settings.scale:.2f} {(self.settings.height_unit - y) * self.settings.scale:.2f} {w * self.settings.scale:.2f} {-h * self.settings.scale:.2f} re {op}")
+        self._out(f"{x * self.settings.scale:.2f} "
+                  f"{(self.settings.height_unit - y) * self.settings.scale:.2f} "
+                  f"{w * self.settings.scale:.2f} {-h * self.settings.scale:.2f} re "
+                  f"{self.get_op_from_draw_style(drawing_style)}")
 
     @check_page
-    def ellipse(self, x, y, w, h, style=''):
+    def ellipse(self, x, y, w, h, drawing_style=''):
         """Draw a ellipse"""
-        if style == 'F':
-            op = 'f'
-        elif style == 'FD' or style == 'DF':
-            op = 'B'
-        else:
-            op = 'S'
-
         cx = x + w / 2.0
         cy = y + h / 2.0
         rx = w / 2.0
@@ -370,7 +372,7 @@ class FPDF:
                   f"{(self.settings.height_unit - (cy + ly)) * self.settings.scale:.2f} "
                   f"{(cx + rx) * self.settings.scale:.2f} "
                   f"{(self.settings.height_unit - cy) * self.settings.scale:.2f} c"
-                  f"{op}")
+                  f"{self.get_op_from_draw_style(drawing_style)}")
 
     def add_font(self, font_family, font_style='', font_name='', uni=False):
         """Add a TrueType or Type1 font"""
@@ -1033,20 +1035,6 @@ class FPDF:
         else:
             raise CatchAllError('Incorrect output destination: ' + dest)
 
-    # def normalize_text(self, txt):
-    #     """Check that text input is in the correct format/encoding"""
-    #     # - for TTF unicode fonts: unicode object (utf8 encoding)
-    #     # - for built-in fonts: string instances (encoding: latin-1, cp1252)
-    #     if not PY3K:
-    #         if self.unifontsubset and isinstance(txt, str):
-    #             return txt.decode("utf-8")
-    #         elif not self.unifontsubset and isinstance(txt, unicode):
-    #             return txt.encode(self.settings.core_fonts_encoding)
-    #     else:
-    #         if not self.unifontsubset and self.settings.core_fonts_encoding:
-    #             return txt.encode(self.settings.core_fonts_encoding).decode("latin-1")
-    #     return txt
-
     def normalize_text(self, txt):
         # NOTE: The original method normalize_text above is replaced by the current
         # one. I intend to remove the complexity associated to supporing Python2
@@ -1059,6 +1047,13 @@ class FPDF:
             return txt.encode(self.settings.core_fonts_encoding).decode("latin-1")
 
         return txt
+
+
+
+##########################################################################################################################
+##########################################################################################################################
+
+
 
     def _dochecks(self):
         # Check for locale-related bug
@@ -1877,19 +1872,19 @@ class FPDF:
         self._out(s)
         self._out('endstream')
 
-    def _out(self, s):
-        # Add a line to the document
-        if PY3K and isinstance(s, bytes):
+    def _format_string(self, s):
+        if isinstance(s, bytes):
             # manage binary data as latin1 until PEP461-like function is implemented
             s = s.decode("latin1")
-        elif not PY3K and isinstance(s, unicode):
-            s = s.encode("latin1")  # default encoding (font name and similar)
-        elif not isinstance(s, basestring):
+        elif not isinstance(s, str):
             s = str(s)
+        return s
+
+    def _out(self, s):
         if self.state == DocumentState.WRITING_PAGE:
-            self.pages[self.current_page]["content"] += (s + "\n")
+            self.pages[self.current_page]["content"] += f"{self._format_string(s)}\n"
         else:
-            self.buffer += (s + "\n")
+            self.buffer += f"{self._format_string(s)}\n"
 
     @check_page
     def interleaved2of5(self, txt, x, y, w=1.0, h=10.0):
