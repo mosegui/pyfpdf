@@ -311,15 +311,6 @@ class FPDF:
         self.line(x1, y1, x2, y2)
         self._set_dash()
 
-    # @check_page
-    # def rect(self, x, y, w, h, drawing_style=''):
-    #     """Draw a rectangle"""
-    #
-    #     self._out(f"{x * self.settings.scale:.2f} "
-    #               f"{(self.settings.height_unit - y) * self.settings.scale:.2f} "
-    #               f"{w * self.settings.scale:.2f} {-h * self.settings.scale:.2f} re "
-    #               f"{get_op_from_draw_style(drawing_style)}")
-
     @check_page
     def ellipse(self, x, y, w, h, drawing_style=''):
         """Draw a ellipse"""
@@ -1860,6 +1851,7 @@ class FPDF:
         self._out(s)
         self._out('endstream')
 
+    @check_page
     def insert(self, element):
         if hasattr(element, "to_string"):
             self._out(element.to_string())
