@@ -13,6 +13,7 @@ class PDFElement(abc.ABC):
     def to_string(self):
         pass
 
+
 class Line(PDFElement):
     def __init__(self, x1, y1, x2, y2, settings):
         self.x1 = x1
@@ -26,6 +27,30 @@ class Line(PDFElement):
                f"{(self.settings.height_unit - self.y1) * self.settings.scale:.2f} m " \
                f"{self.x2 * self.settings.scale:.2f} " \
                f"{(self.settings.height_unit - self.y2) * self.settings.scale:.2f} l S"
+
+
+class DashedLine(PDFElement):
+    def __init__(self, x1, y1, x2, y2, settings, dash_length=1, space_length=1):
+        self.x1 = x1
+        self.y1 = y1
+        self.x2 = x2
+        self.y2 = y2
+        self.settings = settings
+        self.dash_length = dash_length
+        self.space_length = space_length
+
+    def to_string(self):
+        hex = []
+        hex.append(self.set_dash(self.dash_length, self.space_length))
+        hex.append(Line(self.x1, self.y1, self.x2, self.y2, self.settings).to_string())
+        hex.append(self.set_dash())
+        return hex
+
+    def set_dash(self, dash_length=1, space_length=1):
+        if dash_length and space_length:
+            return f"[{dash_length * self.settings.scale:.3f} {space_length * self.settings.scale:.3f}] 0 d"
+        else:
+            return "[] 0 d"
 
 
 class Rectangle(PDFElement):
@@ -42,7 +67,6 @@ class Rectangle(PDFElement):
                f"{(self.settings.height_unit - self.y_coord) * self.settings.scale:.2f} " \
                f"{self.width * self.settings.scale:.2f} {-self.height * self.settings.scale:.2f} re " \
                f"{get_op_from_draw_style(self.drawing_style)}"
-
 
 
 class Ellipse(PDFElement):

@@ -286,23 +286,6 @@ class FPDF:
         if self.current_page > 0:
             self._out(f"{width * self.settings.scale:.2f} w")
 
-    def _set_dash(self, dash_length=1, space_length=1):
-        if dash_length and space_length:
-            self._out(f"[{dash_length * self.settings.scale:.3f} {space_length * self.settings.scale:.3f}] 0 d")
-        else:
-            self._out('[] 0 d')
-
-    @check_page
-    def dashed_line(self, x1, y1, x2, y2, dash_length=1, space_length=1):
-        """Draw a dashed line. Same interface as line() except:
-           - dash_length: Length of the dash
-           - space_length: Length of the space between dashes"""
-        self._set_dash(dash_length, space_length)
-
-        line = Line(x1, y1, x2, y2, self.settings)
-        self.insert(line)
-
-        self._set_dash()
 
     def add_font(self, font_family, font_style='', font_name='', uni=False):
         """Add a TrueType or Type1 font"""

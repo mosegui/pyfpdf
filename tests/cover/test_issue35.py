@@ -9,6 +9,8 @@
 import common
 from fpdf import FPDF
 
+from fpdf.pdf_elements import DashedLine
+
 @common.add_unittest
 def dotest(outputname, nostamp):
     pdf = FPDF()
@@ -17,9 +19,9 @@ def dotest(outputname, nostamp):
 
     pdf.add_page()
 
-    pdf.dashed_line(10, 10, 110, 10)
-    pdf.dashed_line(10, 20, 110, 20, 5, 5)
-    pdf.dashed_line(10, 30, 110, 30, 1, 10)
+    pdf.insert(DashedLine(10, 10, 110, 10, pdf.settings))
+    pdf.insert(DashedLine(10, 20, 110, 20, pdf.settings, 5, 5))
+    pdf.insert(DashedLine(10, 30, 110, 30, pdf.settings, 1, 10))
 
     pdf.output(outputname, 'F')
 
