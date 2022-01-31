@@ -21,7 +21,7 @@ from __future__ import with_statement
 from struct import pack, unpack, unpack_from
 import re
 import warnings
-from .php import die, substr, str_repeat, str_pad, strlen, count
+from php import die, substr, str_repeat, str_pad, strlen, count
 from .py3k import b, ord
 
 # Define the value used in the "head" table of a created TTF file

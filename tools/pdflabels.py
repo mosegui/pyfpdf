@@ -93,7 +93,7 @@ class PDFLabel(FPDF):
         posX = self.margin_left + self.countX * (self.width + self.space_x) + self.padding
         posY = self.margin_top + self.countY * (self.height + self.space_y) + self.padding
         self.set_xy(posX,posY)
-        self.multi_cell(self.width - self.padding,self.line_height,text,0,'L')
+        self.multi_cell(self.width - self.padding, self.line_height,text,0,'L')
 
     def put_catalog(self):
         super(PDFLabel,self)._putcatalog()

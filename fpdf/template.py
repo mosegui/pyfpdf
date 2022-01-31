@@ -12,7 +12,7 @@ import sys,os,csv
 from .fpdf import FPDF
 from .py3k import PY3K, basestring, unicode
 
-from fpdf.pdf_elements import Rectangle
+from fpdf.pdf_elements import Line, Rectangle
 
 def rgb(col):
     return (col // 65536), (col // 256 % 256), (col% 256)
@@ -190,7 +190,7 @@ class Template:
             pdf.set_draw_color(*rgb(foreground))
         #print "SetLineWidth", size
         pdf.set_line_width(size)
-        pdf.line(x1, y1, x2, y2)
+        pdf.insert(Line(x1, y1, x2, y2, pdf.settings))
 
     def rect(self, pdf, x1=0, y1=0, x2=0, y2=0, size=0, foreground=0, backgroud=65535, *args, **kwargs):
         if pdf.draw_color!=rgb(foreground):

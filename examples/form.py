@@ -3,7 +3,7 @@ from __future__ import with_statement
 
 import sys,os
 from fpdf import FPDF
-from fpdf.pdf_elements import Rectangle
+from fpdf.pdf_elements import Line, Rectangle
 
 class Form:
     def __init__(self, infile):
@@ -63,7 +63,7 @@ class Form:
 
     def line(self, pdf, x1=0, y1=0, x2=0, y2=0, size=0, *args, **kwargs):
         pdf.set_line_width(size)
-        pdf.line(x1, y1, x2, y2)
+        pdf.insert(Line(x1, y1, x2, y2, pdf.settings))
 
     def rect(self, pdf, x1=0, y1=0, x2=0, y2=0, size=0, *args, **kwargs):
         pdf.set_line_width(size)

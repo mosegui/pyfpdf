@@ -24,14 +24,14 @@ import os, sys, zlib, re, tempfile, struct
 
 from contextlib import contextmanager
 
-from .ttfonts import TTFontFile
+from ttfonts import TTFontFile
 from .fonts import fpdf_charwidths
 from .php import substr, UTF8ToUTF16BE, UTF8StringToArray
 from .py3k import PY3K, pickle, urlopen, BytesIO, Image, basestring, unicode, exception, b, hashpath
 
 from .helpers import get_page_dimensions, load_cache, CatchAllError, check_page, get_op_from_draw_style
 from .pdf_settings import PDFSettings
-from .pdf_elements import Rectangle
+from .pdf_elements import Line, Rectangle
 
 
 # Global variables
@@ -308,7 +308,10 @@ class FPDF:
            - dash_length: Length of the dash
            - space_length: Length of the space between dashes"""
         self._set_dash(dash_length, space_length)
-        self.line(x1, y1, x2, y2)
+
+        line = Line(x1, y1, x2, y2, self.settings)
+        self.insert(line)
+
         self._set_dash()
 
     @check_page

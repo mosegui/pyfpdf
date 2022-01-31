@@ -51,19 +51,11 @@ except ImportError:
     except ImportError:
         Image = None
 
-try:
-    from HTMLParser import HTMLParser
-except ImportError:
-    from html.parser import HTMLParser
 
 if PY3K:
     basestring = str
     unicode = str
     ord = lambda x: x
-else:
-    basestring = basestring
-    unicode = unicode
-    ord = ord
 
 
 # shortcut to bytes conversion (b prefix)

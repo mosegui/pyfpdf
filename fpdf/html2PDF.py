@@ -8,10 +8,10 @@ __license__ = "LGPL 3.0"
 
 # Inspired by tuto5.py and several examples from fpdf.org, html2fpdf, etc.
 
-from .fpdf import FPDF
-from .py3k import PY3K, basestring, unicode, HTMLParser
 
-from fpdf.pdf_elements import Rectangle
+import html.parser
+
+from fpdf.pdf_elements import Line, Rectangle
 
 DEBUG = False
 
@@ -25,11 +25,11 @@ def hex2dec(color = "#000000"):
         b = int(color[5:7], 16)
         return r, g, b
 
-class HTML2FPDF(HTMLParser):
+class HTML2FPDF(html.parser.HTMLParser):
     "Render basic HTML to FPDF"
 
     def __init__(self, pdf, image_map=None):
-        HTMLParser.__init__(self)
+        super().__init__()
         self.style = {}
         self.pre = False
         self.href = ''
@@ -168,7 +168,7 @@ class HTML2FPDF(HTMLParser):
         x1 = self.pdf.x
         y1 = self.pdf.y
         w = sum([self.width2mm(lenght) for lenght in self.table_col_width])
-        self.pdf.line(x1,y1,x1+w,y1)
+        self.pdf.insert(Line(x1, y1, x1 + w, y1, self.pdf.settings))
 
 
     def handle_starttag(self, tag, attrs):
@@ -395,7 +395,7 @@ class HTML2FPDF(HTMLParser):
 
     def put_line(self):
         self.pdf.ln(2)
-        self.pdf.line(self.pdf.get_x(),self.pdf.get_y(),self.pdf.get_x()+187,self.pdf.get_y())
+        self.pdf.insert(Line(self.pdf.get_x(),self.pdf.get_y(),self.pdf.get_x() + 187, self.pdf.get_y(), self.pdf.settings))
         self.pdf.ln(3)
 
 class HTMLMixin(object):
