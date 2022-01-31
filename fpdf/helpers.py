@@ -69,3 +69,16 @@ def check_page(fn):
             return fn(self, *args, **kwargs)
 
     return wrapper
+
+
+def get_op_from_draw_style(drawing_style):
+    DrawingStyles = {
+        "F": "f",
+        "D": "S",
+        "FD": "B",
+        "DF": "B"
+    }
+
+    if drawing_style in DrawingStyles.keys():
+        return DrawingStyles.get(drawing_style)
+    return 'S'

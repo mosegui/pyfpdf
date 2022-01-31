@@ -11,6 +11,8 @@ __license__ = "LGPL 3.0"
 from .fpdf import FPDF
 from .py3k import PY3K, basestring, unicode, HTMLParser
 
+from fpdf.pdf_elements import Rectangle
+
 DEBUG = False
 
 def px2mm(px):
@@ -126,7 +128,10 @@ class HTML2FPDF(HTMLParser):
         if bgcolor:
             fill_color = self.pdf.fill_color
             self.pdf.set_fill_color(*bgcolor)
-            self.pdf.rect(self.pdf.x, self.pdf.y, w, h, 'F')
+
+            rectangle = Rectangle(self.pdf.x, self.pdf.y, w, h, self.pdf.settings, "F")  # "F" stands for full
+            self.pdf.insert(rectangle)
+
             self.pdf.fill_color = fill_color
 
     def output_table_header(self):

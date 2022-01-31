@@ -29,8 +29,9 @@ from .fonts import fpdf_charwidths
 from .php import substr, UTF8ToUTF16BE, UTF8StringToArray
 from .py3k import PY3K, pickle, urlopen, BytesIO, Image, basestring, unicode, exception, b, hashpath
 
-from .helpers import get_page_dimensions, load_cache, CatchAllError, check_page
-from.pdf_settings import PDFSettings
+from .helpers import get_page_dimensions, load_cache, CatchAllError, check_page, get_op_from_draw_style
+from .pdf_settings import PDFSettings
+from .pdf_elements import Rectangle
 
 
 # Global variables
@@ -310,27 +311,14 @@ class FPDF:
         self.line(x1, y1, x2, y2)
         self._set_dash()
 
-    def get_op_from_draw_style(self, drawing_style):
-
-        DrawingStyles = {
-            "F": "f",
-            "D": "S",
-            "FD": "B",
-            "DF": "B"
-        }
-
-        if drawing_style in DrawingStyles.keys():
-            return DrawingStyles.get(drawing_style)
-        return 'S'
-
-    @check_page
-    def rect(self, x, y, w, h, drawing_style=''):
-        """Draw a rectangle"""
-
-        self._out(f"{x * self.settings.scale:.2f} "
-                  f"{(self.settings.height_unit - y) * self.settings.scale:.2f} "
-                  f"{w * self.settings.scale:.2f} {-h * self.settings.scale:.2f} re "
-                  f"{self.get_op_from_draw_style(drawing_style)}")
+    # @check_page
+    # def rect(self, x, y, w, h, drawing_style=''):
+    #     """Draw a rectangle"""
+    #
+    #     self._out(f"{x * self.settings.scale:.2f} "
+    #               f"{(self.settings.height_unit - y) * self.settings.scale:.2f} "
+    #               f"{w * self.settings.scale:.2f} {-h * self.settings.scale:.2f} re "
+    #               f"{get_op_from_draw_style(drawing_style)}")
 
     @check_page
     def ellipse(self, x, y, w, h, drawing_style=''):
@@ -372,7 +360,7 @@ class FPDF:
                   f"{(self.settings.height_unit - (cy + ly)) * self.settings.scale:.2f} "
                   f"{(cx + rx) * self.settings.scale:.2f} "
                   f"{(self.settings.height_unit - cy) * self.settings.scale:.2f} c"
-                  f"{self.get_op_from_draw_style(drawing_style)}")
+                  f"{get_op_from_draw_style(drawing_style)}")
 
     def add_font(self, font_family, font_style='', font_name='', uni=False):
         """Add a TrueType or Type1 font"""
@@ -1872,6 +1860,12 @@ class FPDF:
         self._out(s)
         self._out('endstream')
 
+    def insert(self, element):
+        if hasattr(element, "to_string"):
+            self._out(element.to_string())
+        elif isinstance(element, str):
+            self._out(element)
+
     def _format_string(self, s):
         if isinstance(s, bytes):
             # manage binary data as latin1 until PEP461-like function is implemented
@@ -1930,7 +1924,8 @@ class FPDF:
 
                 # draw every second value, the other is represented by space
                 if bar % 2 == 0:
-                    self.rect(x, y, line_width, h, 'F')
+                    rectangle = Rectangle(x, y, line_width, h, self.settings, "F")  # "F" stands for full
+                    self.insert(rectangle)
 
                 x += line_width
 
@@ -1961,6 +1956,7 @@ class FPDF:
                 raise RuntimeError('Invalid char "%s" for Code39' % c)
             for i, d in enumerate(chars[c]):
                 if i % 2 == 0:
-                    self.rect(x, y, dim[d], h, 'F')
+                    rectangle = Rectangle(x, y, dim[d], h, self.settings, "F")  # "F" stands for full
+                    self.insert(rectangle)
                 x += dim[d]
             x += dim['n']

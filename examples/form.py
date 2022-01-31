@@ -3,6 +3,7 @@ from __future__ import with_statement
 
 import sys,os
 from fpdf import FPDF
+from fpdf.pdf_elements import Rectangle
 
 class Form:
     def __init__(self, infile):
@@ -66,7 +67,8 @@ class Form:
 
     def rect(self, pdf, x1=0, y1=0, x2=0, y2=0, size=0, *args, **kwargs):
         pdf.set_line_width(size)
-        pdf.rect(x1, y1, x2-x1, y2-y1)
+        rectangle = Rectangle(x1, y1, x2-x1, y2-y1, pdf.settings, "F")  # "F" stands for full
+        pdf.insert(rectangle)
 
     def image(self, pdf, x1=0, y1=0, x2=0, y2=0, text='', *args,**kwargs):
         pdf.image(text,x1,y1,w=x2-x1,h=y2-y1,type='',link='')

@@ -2,6 +2,7 @@
 
 import os
 from fpdf import FPDF
+from fpdf.pdf_elements import Rectangle
 
 pdf = FPDF()
 pdf.add_page()
@@ -9,9 +10,9 @@ pdf.set_font('helvetica', '', 13.0)
 pdf.set_xy(105.0, 8.0)
 pdf.cell(ln=0, h=22.0, align='C', w=75.0, txt='Sample Invoice', border=0)
 pdf.set_line_width(0.0)
-pdf.rect(15.0, 15.0, 170.0, 245.0)
+pdf.insert(Rectangle(15.0, 15.0, 170.0, 245.0, pdf.settings))
 pdf.set_line_width(0.0)
-pdf.rect(95.0, 15.0, 10.0, 10.0)
+pdf.insert(Rectangle(95.0, 15.0, 10.0, 10.0, pdf.settings))
 pdf.image('../tutorial/logo.png', 20.0, 17.0, link='', type='', w=13.0, h=13.0)
 pdf.set_font('arial', 'B', 16.0)
 pdf.set_xy(95.0, 18.0)
@@ -123,7 +124,7 @@ pdf.set_font('arial', '', 12.0)
 pdf.set_xy(125.0, 251.0)
 pdf.cell(ln=0, h=9.0, align='R', w=25.0, txt='Total:', border=0)
 pdf.set_line_width(0.0)
-pdf.rect(155.0, 252.0, 25.0, 7.0)
+pdf.insert(Rectangle(155.0, 252.0, 25.0, 7.0, pdf.settings))
 pdf.set_font('courier', '', 10.0)
 pdf.set_xy(20.0, 253.0)
 pdf.cell(ln=0, h=7.0, align='L', w=120.0, txt='012345678905', border=0)

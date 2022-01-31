@@ -12,6 +12,8 @@ import sys,os,csv
 from .fpdf import FPDF
 from .py3k import PY3K, basestring, unicode
 
+from fpdf.pdf_elements import Rectangle
+
 def rgb(col):
     return (col // 65536), (col // 256 % 256), (col% 256)
 
@@ -20,6 +22,9 @@ class Template:
                  title='', author='', subject='', creator='', keywords=''):
         if elements:
             self.load_elements(elements)
+
+        # TODO: self.rect and other do not exist any longer as PDF methods but as independent classes.
+        #  This construction here will require adjustment (31.01.2022)
         self.handlers = {'T': self.text, 'L': self.line, 'I': self.image, 
                          'B': self.rect, 'BC': self.barcode, 'W': self.write, }
         self.texts = {}
@@ -192,8 +197,11 @@ class Template:
             pdf.set_draw_color(*rgb(foreground))
         if pdf.fill_color!=rgb(backgroud):
             pdf.set_fill_color(*rgb(backgroud))
+
         pdf.set_line_width(size)
-        pdf.rect(x1, y1, x2-x1, y2-y1)
+
+        rectangle = Rectangle(x1, y1, x2 - x1, y2 - y1, pdf.settings)
+        pdf.insert(rectangle)
 
     def image(self, pdf, x1=0, y1=0, x2=0, y2=0, text='', *args,**kwargs):
         if text:
