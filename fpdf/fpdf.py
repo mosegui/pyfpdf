@@ -24,7 +24,7 @@ import os, sys, zlib, re, tempfile, struct
 
 from contextlib import contextmanager
 
-from ttfonts import TTFontFile
+from .ttfonts import TTFontFile
 from .fonts import fpdf_charwidths
 from .php import substr, UTF8ToUTF16BE, UTF8StringToArray
 from .py3k import PY3K, pickle, urlopen, BytesIO, Image, basestring, unicode, exception, b, hashpath
