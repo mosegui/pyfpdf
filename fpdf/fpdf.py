@@ -286,16 +286,6 @@ class FPDF:
         if self.current_page > 0:
             self._out(f"{width * self.settings.scale:.2f} w")
 
-    @check_page
-    def line(self, x1, y1, x2, y2):
-        """Draw a line"""
-        self._out(
-            f"{x1 * self.settings.scale:.2f} "
-            f"{(self.settings.height_unit - y1) * self.settings.scale:.2f} m "
-            f"{x2 * self.settings.scale:.2f} "
-            f"{(self.settings.height_unit - y2) * self.settings.scale:.2f} l S"
-        )
-
     def _set_dash(self, dash_length=1, space_length=1):
         if dash_length and space_length:
             self._out(f"[{dash_length * self.settings.scale:.3f} {space_length * self.settings.scale:.3f}] 0 d")
@@ -313,48 +303,6 @@ class FPDF:
         self.insert(line)
 
         self._set_dash()
-
-    @check_page
-    def ellipse(self, x, y, w, h, drawing_style=''):
-        """Draw a ellipse"""
-        cx = x + w / 2.0
-        cy = y + h / 2.0
-        rx = w / 2.0
-        ry = h / 2.0
-
-        lx = 4.0 / 3.0 * (math.sqrt(2) - 1) * rx
-        ly = 4.0 / 3.0 * (math.sqrt(2) - 1) * ry
-
-        self._out(f"{(cx + rx) * self.settings.scale:.2f} "
-                  f"{(self.settings.height_unit - cy) * self.settings.scale:.2f} m "
-                  f"{(cx + rx) * self.settings.scale:.2f} "
-                  f"{(self.settings.height_unit - (cy - ly)) * self.settings.scale:.2f} "
-                  f"{(cx + lx) * self.settings.scale:.2f} "
-                  f"{(self.settings.height_unit - (cy - ry)) * self.settings.scale:.2f} "
-                  f"{cx * self.settings.scale:.2f} "
-                  f"{(self.settings.height_unit - (cy - ry)) * self.settings.scale:.2f} c")
-
-        self._out(f"{(cx - lx) * self.settings.scale:.2f} "
-                  f"{(self.settings.height_unit - (cy - ry)) * self.settings.scale:.2f} "
-                  f"{(cx - rx) * self.settings.scale:.2f} "
-                  f"{(self.settings.height_unit - (cy - ly)) * self.settings.scale:.2f} "
-                  f"{(cx - rx) * self.settings.scale:.2f} "
-                  f"{(self.settings.height_unit - cy) * self.settings.scale:.2f} c")
-
-        self._out(f"{(cx - rx) * self.settings.scale:.2f} "
-                  f"{(self.settings.height_unit - (cy + ly)) * self.settings.scale:.2f} "
-                  f"{(cx - lx) * self.settings.scale:.2f} "
-                  f"{(self.settings.height_unit - (cy + ry)) * self.settings.scale:.2f} "
-                  f"{cx * self.settings.scale:.2f} "
-                  f"{(self.settings.height_unit - (cy + ry)) * self.settings.scale:.2f} c")
-
-        self._out(f"{(cx + lx) * self.settings.scale:.2f} "
-                  f"{(self.settings.height_unit - (cy + ry)) * self.settings.scale:.2f} "
-                  f"{(cx + rx) * self.settings.scale:.2f} "
-                  f"{(self.settings.height_unit - (cy + ly)) * self.settings.scale:.2f} "
-                  f"{(cx + rx) * self.settings.scale:.2f} "
-                  f"{(self.settings.height_unit - cy) * self.settings.scale:.2f} c"
-                  f"{get_op_from_draw_style(drawing_style)}")
 
     def add_font(self, font_family, font_style='', font_name='', uni=False):
         """Add a TrueType or Type1 font"""
@@ -1857,9 +1805,20 @@ class FPDF:
     @check_page
     def insert(self, element):
         if hasattr(element, "to_string"):
-            self._out(element.to_string())
+
+            element_hex = element.to_string()
+            if isinstance(element_hex, str):
+                self._out(element_hex)
+            elif isinstance(element_hex, list):
+                for item in element_hex:
+                    self._out(item)
+            else:
+                raise TypeError("Invalid PDF element HEX type")
+
         elif isinstance(element, str):
             self._out(element)
+        else:
+            raise TypeError("Invalid PDF element type")
 
     def _format_string(self, s):
         if isinstance(s, bytes):

@@ -1,7 +1,19 @@
+import math
+import abc
+
 from .helpers import get_op_from_draw_style
 
 
-class Line:
+class PDFElement(abc.ABC):
+    @abc.abstractmethod
+    def __init__(self):
+        pass
+
+    @abc.abstractmethod
+    def to_string(self):
+        pass
+
+class Line(PDFElement):
     def __init__(self, x1, y1, x2, y2, settings):
         self.x1 = x1
         self.y1 = y1
@@ -16,7 +28,7 @@ class Line:
                f"{(self.settings.height_unit - self.y2) * self.settings.scale:.2f} l S"
 
 
-class Rectangle:
+class Rectangle(PDFElement):
     def __init__(self, x_coord, y_coord, width, height, settings, drawing_style=None):
         self.x_coord = x_coord
         self.y_coord = y_coord
@@ -30,3 +42,56 @@ class Rectangle:
                f"{(self.settings.height_unit - self.y_coord) * self.settings.scale:.2f} " \
                f"{self.width * self.settings.scale:.2f} {-self.height * self.settings.scale:.2f} re " \
                f"{get_op_from_draw_style(self.drawing_style)}"
+
+
+
+class Ellipse(PDFElement):
+    def __init__(self, x_top_left, y_top_left, width, height, settings, drawing_style=''):
+
+        self.settings = settings
+        self.drawing_style = drawing_style
+
+        self.x_center = x_top_left + width / 2.0
+        self.y_center = y_top_left + height / 2.0
+        self.radius_along_x = width / 2.0
+        self.radius_along_y = height / 2.0
+
+        self.lenght_along_x = 4.0 / 3.0 * (math.sqrt(2) - 1) * self.radius_along_x
+        self.lenght_along_y = 4.0 / 3.0 * (math.sqrt(2) - 1) * self.radius_along_y
+
+    def to_string(self):
+
+        hex = []
+
+        hex.append(f"{(self.x_center + self.radius_along_x) * self.settings.scale:.2f} "
+                   f"{(self.settings.height_unit - self.y_center) * self.settings.scale:.2f} m "
+                   f"{(self.x_center + self.radius_along_x) * self.settings.scale:.2f} "
+                   f"{(self.settings.height_unit - (self.y_center - self.lenght_along_y)) * self.settings.scale:.2f} "
+                   f"{(self.x_center + self.lenght_along_x) * self.settings.scale:.2f} "
+                   f"{(self.settings.height_unit - (self.y_center - self.radius_along_y)) * self.settings.scale:.2f} "
+                   f"{self.x_center * self.settings.scale:.2f} "
+                   f"{(self.settings.height_unit - (self.y_center - self.radius_along_y)) * self.settings.scale:.2f} c")
+
+        hex.append(f"{(self.x_center - self.lenght_along_x) * self.settings.scale:.2f} "
+                   f"{(self.settings.height_unit - (self.y_center - self.radius_along_y)) * self.settings.scale:.2f} "
+                   f"{(self.x_center - self.radius_along_x) * self.settings.scale:.2f} "
+                   f"{(self.settings.height_unit - (self.y_center - self.lenght_along_y)) * self.settings.scale:.2f} "
+                   f"{(self.x_center - self.radius_along_x) * self.settings.scale:.2f} "
+                   f"{(self.settings.height_unit - self.y_center) * self.settings.scale:.2f} c")
+
+        hex.append(f"{(self.x_center - self.radius_along_x) * self.settings.scale:.2f} "
+                   f"{(self.settings.height_unit - (self.y_center + self.lenght_along_y)) * self.settings.scale:.2f} "
+                   f"{(self.x_center - self.lenght_along_x) * self.settings.scale:.2f} "
+                   f"{(self.settings.height_unit - (self.y_center + self.radius_along_y)) * self.settings.scale:.2f} "
+                   f"{self.x_center * self.settings.scale:.2f} "
+                   f"{(self.settings.height_unit - (self.y_center + self.radius_along_y)) * self.settings.scale:.2f} c")
+
+        hex.append(f"{(self.x_center + self.lenght_along_x) * self.settings.scale:.2f} "
+                   f"{(self.settings.height_unit - (self.y_center + self.radius_along_y)) * self.settings.scale:.2f} "
+                   f"{(self.x_center + self.radius_along_x) * self.settings.scale:.2f} "
+                   f"{(self.settings.height_unit - (self.y_center + self.lenght_along_y)) * self.settings.scale:.2f} "
+                   f"{(self.x_center + self.radius_along_x) * self.settings.scale:.2f} "
+                   f"{(self.settings.height_unit - self.y_center) * self.settings.scale:.2f} c"
+                   f"{get_op_from_draw_style(self.drawing_style)}")
+
+        return hex
