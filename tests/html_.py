@@ -9,7 +9,7 @@ __license__ = "LGPL 3.0"
 # Inspired by tuto5.py and several examples from fpdf.org, html2fpdf, etc.
 
 from fpdf import FPDF, HTMLMixin
-
+from fpdf.pdf_elements import Figure
 
 if __name__=='__main__':
     html="""
@@ -63,7 +63,9 @@ or on an image: click on the logo.<br>
 
     class MyFPDF(FPDF, HTMLMixin):
         def header(self):
-            self.image('../tutorial/logo_pb.png',10,8,33)
+            figure = Figure('../tutorial/logo_pb.png', 10, 8, 33)
+            self.insert(figure)
+            # self.image('../tutorial/logo_pb.png',10,8,33)
             self.set_font('Arial','B',15)
             self.cell(80)
             self.cell(30,10,'Title',1,0,'C')

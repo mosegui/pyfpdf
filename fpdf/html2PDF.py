@@ -60,7 +60,7 @@ class HTML2FPDF(html.parser.HTMLParser):
         
     def width2mm(self, length):
         if length[-1]=='%':
-            total = self.pdf.width_unit - self.pdf.right_page_margin - self.pdf.left_page_margin
+            total = self.pdf.settings.width_unit - self.pdf.settings.right_page_margin - self.pdf.settings.left_page_margin
             if self.table['width'][-1]=='%':
                 total *= int(self.table['width'][:-1])/100.0
             return int(length[:-1]) * total / 101.0
@@ -99,7 +99,7 @@ class HTML2FPDF(html.parser.HTMLParser):
                 self.tfooter.append(((w,h,txt,border,0,align), bgcolor))
             # check if reached end of page, add table footer and header:
             height = h + (self.tfooter and self.tfooter[0][0][1] or 0)
-            if self.pdf.y+height>self.pdf.page_break_trigger and not self.th:
+            if self.pdf.y+height > self.pdf.settings.page_break_trigger and not self.th:
                 self.output_table_footer()
                 self.pdf.add_page(same = True)
                 self.theader_out = self.tfooter_out = False
@@ -126,10 +126,10 @@ class HTML2FPDF(html.parser.HTMLParser):
     def box_shadow(self, w, h, bgcolor):
         if DEBUG: print("box_shadow", w, h, bgcolor)
         if bgcolor:
-            fill_color = self.pdf.fill_color
+            fill_color = self.pdf.settings.fill_color
             self.pdf.set_fill_color(*bgcolor)
 
-            rectangle = Rectangle(self.pdf.x, self.pdf.y, w, h, self.pdf.settings, "F")  # "F" stands for full
+            rectangle = Rectangle(self.pdf.x, self.pdf.y, w, h, "F")  # "F" stands for full
             self.pdf.insert(rectangle)
 
             self.pdf.fill_color = fill_color
@@ -168,7 +168,7 @@ class HTML2FPDF(html.parser.HTMLParser):
         x1 = self.pdf.x
         y1 = self.pdf.y
         w = sum([self.width2mm(lenght) for lenght in self.table_col_width])
-        self.pdf.insert(Line(x1, y1, x1 + w, y1, self.pdf.settings))
+        self.pdf.insert(Line(x1, y1, x1 + w, y1))
 
 
     def handle_starttag(self, tag, attrs):
@@ -211,7 +211,7 @@ class HTML2FPDF(html.parser.HTMLParser):
             self.pdf.ln(self.h+2)
             self.pdf.set_text_color(190,0,0)
             bullet = self.bullet[self.indent-1]
-            if not isinstance(bullet, basestring):
+            if not isinstance(bullet, str):
                 bullet += 1
                 self.bullet[self.indent-1] = bullet
                 bullet = "%s. " % bullet
@@ -240,9 +240,9 @@ class HTML2FPDF(html.parser.HTMLParser):
             if not 'width' in self.table:
                 self.table['width'] = '100%'
             if self.table['width'][-1]=='%':
-                w = self.pdf.width_unit - self.pdf.right_page_margin - self.pdf.left_page_margin
+                w = self.pdf.settings.width_unit - self.pdf.settings.right_page_margin - self.pdf.settings.left_page_margin
                 w *= int(self.table['width'][:-1])/100.0
-                self.table_offset = (self.pdf.width_unit - w) / 2.0
+                self.table_offset = (self.pdf.settings.width_unit - w) / 2.0
             self.table_col_width = []
             self.theader_out = self.tfooter_out = False
             self.theader = []
@@ -273,7 +273,7 @@ class HTML2FPDF(html.parser.HTMLParser):
                 w = px2mm(attrs.get('width', 0))
                 h = px2mm(attrs.get('height',0))
                 if self.align and self.align[0].upper() == 'C':
-                    x = (self.pdf.width_unit - x) / 2.0 - w / 2.0
+                    x = (self.pdf.settings.width_unit - x) / 2.0 - w / 2.0
                 self.pdf.image(self.image_map(attrs['src']),
                                x, y, w, h, link=self.href)
                 self.pdf.set_x(x+w)

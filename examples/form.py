@@ -3,7 +3,7 @@ from __future__ import with_statement
 
 import sys,os
 from fpdf import FPDF
-from fpdf.pdf_elements import Line, Rectangle
+from fpdf.pdf_elements import Line, Rectangle, Figure
 
 class Form:
     def __init__(self, infile):
@@ -71,7 +71,8 @@ class Form:
         pdf.insert(rectangle)
 
     def image(self, pdf, x1=0, y1=0, x2=0, y2=0, text='', *args,**kwargs):
-        pdf.image(text,x1,y1,w=x2-x1,h=y2-y1,type='',link='')
+        figure = Figure(text, x1, y1, w=x2-x1, h=y2-y1)
+        pdf.insert(figure)
 
     def barcode(self, pdf, x1=0, y1=0, x2=0, y2=0, text='', font="arial", size=1,
              *args, **kwargs):

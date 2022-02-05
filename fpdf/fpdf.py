@@ -29,9 +29,9 @@ from .fonts import fpdf_charwidths
 from .php import substr, UTF8ToUTF16BE, UTF8StringToArray
 from .py3k import PY3K, pickle, urlopen, BytesIO, Image, basestring, unicode, exception, b, hashpath
 
-from .helpers import get_page_dimensions, load_cache, CatchAllError, check_page, get_op_from_draw_style
+from .helpers import get_page_dimensions, load_cache, CatchAllError, check_page, get_op_from_draw_style, load_resource
 from .pdf_settings import PDFSettings
-from .pdf_elements import Line, Rectangle
+from .pdf_elements import Line, Rectangle, Figure
 
 
 # Global variables
@@ -91,7 +91,7 @@ def get_unifilename(ttf_file_path):
 
 
 class FPDF:
-    pdf_version = "1.3"
+    pdf_version = "1.4"
 
     core_fonts = {
         'courier': 'Courier', 'courierB': 'Courier-Bold',
@@ -840,6 +840,7 @@ class FPDF:
                 if not hasattr(self, mtd):
                     raise CatchAllError('Unsupported image type: ' + type)
                 info = getattr(self, mtd)(name)
+
             info['i'] = len(self.images) + 1
             # is_mask and mask_image
             if is_mask and info['cs'] != 'DeviceGray':
@@ -1017,7 +1018,7 @@ class FPDF:
                     for pl in self.page_links[n]:
                         rect = f'{pl[0]:.2f} {pl[1]:.2f} {pl[0] + pl[2]:.2f} {pl[1] - pl[3]:.2f}'
                         annots += '<</Type /Annot /Subtype /Link /Rect [' + rect + '] /Border [0 0 0] '
-                        if isinstance(pl[4], basestring):
+                        if isinstance(pl[4], str):
                             annots += '/A <</S /URI /URI ' + \
                                       self._textstring(pl[4]) + '>>>>'
                         else:
@@ -1582,23 +1583,11 @@ class FPDF:
                f'{-ut / 1000.0 * self.settings.font_size_pt:.2f} ' \
                f're f'
 
-    def load_resource(self, reason, filename):
-        """Load external file"""
-        # by default loading from network is allowed for all images
-        if reason == "image":
-            if filename.startswith("http://") or filename.startswith("https://"):
-                f = BytesIO(urlopen(filename).read())
-            else:
-                f = open(filename, "rb")
-            return f
-        else:
-            raise CatchAllError("Unknown resource loading reason \"%s\"" % reason)
-
     def _parsejpg(self, filename):
         # Extract info from a JPEG file
         f = None
         try:
-            f = self.load_resource("image", filename)
+            f = load_resource("image", filename)
             while True:
                 markerHigh, markerLow = struct.unpack('BB', f.read(2))
                 if markerHigh != 0xFF or markerLow < 0xC0:
@@ -1653,7 +1642,7 @@ class FPDF:
 
     def _parsepng(self, filename):
         # Extract info from a PNG file
-        f = self.load_resource("image", filename)
+        f = load_resource("image", filename)
         # Check signature
         magic = f.read(8).decode("latin1")
         signature = '\x89' + 'PNG' + '\r' + '\n' + '\x1a' + '\n'
@@ -1724,6 +1713,7 @@ class FPDF:
                 break
             else:
                 f.read(n + 4)
+
         if colspace == 'Indexed' and not pal:
             raise CatchAllError('Missing palette in ' + filename)
         f.close()
@@ -1785,11 +1775,27 @@ class FPDF:
         self._out(s)
         self._out('endstream')
 
+    def postprocess_image_dict(self, element):
+        if element.name not in self.images:
+            element.info['i'] = len(self.images) + 1
+            self.images[element.name] = element.info
+        else:
+            element.info['i'] = self.images[element.name]['i']
+
     @check_page
     def insert(self, element):
         if hasattr(element, "to_string"):
 
-            element_hex = element.to_string()
+            if isinstance(element, Figure):
+                self.add_page_if_break_reached(element)
+
+                if element.x is None:
+                    element.x = self.x
+
+                self.postprocess_image_dict(element)
+
+            element_hex = element.to_string(self.settings)
+
             if isinstance(element_hex, str):
                 self._out(element_hex)
             elif isinstance(element_hex, list):
@@ -1802,6 +1808,16 @@ class FPDF:
             self._out(element)
         else:
             raise TypeError("Invalid PDF element type")
+
+    def add_page_if_break_reached(self, figure):
+        if figure.y is None:
+            if self.y + figure.h > self.settings.page_break_trigger and not self.in_footer and self.settings.auto_page_break:
+                # Automatic page break
+                figure.x = self.x
+                self.add_page(same=True)
+                self.x = figure.x
+            figure.y = self.y
+            self.y += figure.h
 
     def _format_string(self, s):
         if isinstance(s, bytes):
@@ -1861,7 +1877,7 @@ class FPDF:
 
                 # draw every second value, the other is represented by space
                 if bar % 2 == 0:
-                    rectangle = Rectangle(x, y, line_width, h, self.settings, "F")  # "F" stands for full
+                    rectangle = Rectangle(x, y, line_width, h, "F")  # "F" stands for full
                     self.insert(rectangle)
 
                 x += line_width

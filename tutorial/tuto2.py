@@ -1,9 +1,13 @@
 from fpdf import FPDF
 
+from fpdf.pdf_elements import Figure
+
 class PDF(FPDF):
     def header(self):
         # Logo
-        self.image('logo_pb.png', 10, 8, 33)
+        figure = Figure('logo_pb.png', 10, 8, 33)
+        self.insert(figure)
+        # self.image('logo_pb.png', 10, 8, 33)
         # Arial bold 15
         self.set_font('Arial', 'B', 15)
         # Move to the right

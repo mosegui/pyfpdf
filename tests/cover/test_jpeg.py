@@ -16,6 +16,8 @@ from fpdf import FPDF
 
 import os.path
 
+from fpdf.pdf_elements import Figure
+
 @common.add_unittest
 def dotest(outputname, nostamp):
     pdf = FPDF()
@@ -26,13 +28,13 @@ def dotest(outputname, nostamp):
     pdf.set_font('Arial', '', 14)  
 
     pdf.text(10, 57, 'DeviceGray')
-    pdf.image(os.path.join(common.basepath, "img_gray.jpg"), 55, 5)
+    pdf.insert(Figure(os.path.join(common.basepath, "img_gray.jpg"), 55, 5, settings=pdf.settings))
 
     pdf.text(10, 157, 'DeviceRGB')
-    pdf.image(os.path.join(common.basepath, "img_rgb.jpg"), 55, 105)
+    pdf.insert(Figure(os.path.join(common.basepath, "img_rgb.jpg"), 55, 105, settings=pdf.settings))
 
     pdf.text(10, 257, 'DeviceCMYK')
-    pdf.image(os.path.join(common.basepath, "img_cmyk.jpg"), 55, 205)
+    pdf.insert(Figure(os.path.join(common.basepath, "img_cmyk.jpg"), 55, 205, settings=pdf.settings))
 
     pdf.output(outputname, 'F')
 

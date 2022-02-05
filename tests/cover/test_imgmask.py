@@ -18,6 +18,8 @@ from fpdf import FPDF
 
 import os
 
+from fpdf.pdf_elements import Figure
+
 @common.add_unittest
 def dotest(outputname, nostamp):
     pdf = FPDF()
@@ -29,20 +31,19 @@ def dotest(outputname, nostamp):
 
     for i in range(0, 270, 5):
         pdf.text(i % 40 + 20, i + 20, "Image masking " * 4)
-    mask = pdf.image(os.path.join(common.basepath, "masking.png"), 
-        is_mask = True)
-    pdf.image(os.path.join(common.basepath, "lena.gif"), 
-        40.0, 20.0, w = 120, mask_image = mask)
 
-    pdf.image(os.path.join(common.basepath, "img_gray.jpg"), 
-        20.0, 200.0, w = 50, mask_image = mask)
-    pdf.image(os.path.join(common.basepath, "img_rgb.jpg"), 
-        80.0, 200.0, w = 50, mask_image = mask)
-    pdf.image(os.path.join(common.basepath, "img_cmyk.jpg"), 
-        140.0, 200.0, w = 50, mask_image = mask)
+    # TODO: Mask Figures need to be a class of their own
+    mask_image = Figure(os.path.join(common.basepath, "masking.png"),  is_mask=True, settings=pdf.settings)
+    pdf.postprocess_image_dict(mask_image)
+    mask = mask_image.info
+
+    pdf.insert(Figure(os.path.join(common.basepath, "lena.gif"),  40.0, 20.0, w=120, mask_image=mask))
+    pdf.insert(Figure(os.path.join(common.basepath, "img_gray.jpg"),  20.0, 200.0, w=50, mask_image=mask))
+    pdf.insert(Figure(os.path.join(common.basepath, "img_rgb.jpg"),  80.0, 200.0, w=50, mask_image=mask))
+    pdf.insert(Figure(os.path.join(common.basepath, "img_cmyk.jpg"), 140.0, 200.0, w=50, mask_image=mask))
 
     pdf.output(outputname, 'F')
 
+
 if __name__ == "__main__":
     common.testmain(__file__, dotest)
-
