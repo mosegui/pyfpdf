@@ -11,7 +11,7 @@ __license__ = "LGPL 3.0"
 
 import html.parser
 
-from fpdf.pdf_elements import Line, Rectangle
+from fpdf.pdf_elements import Line, Rectangle, Figure
 
 DEBUG = False
 
@@ -274,8 +274,7 @@ class HTML2FPDF(html.parser.HTMLParser):
                 h = px2mm(attrs.get('height',0))
                 if self.align and self.align[0].upper() == 'C':
                     x = (self.pdf.settings.width_unit - x) / 2.0 - w / 2.0
-                self.pdf.image(self.image_map(attrs['src']),
-                               x, y, w, h, link=self.href)
+                self.pdf.insert(Figure(self.image_map(attrs['src']), x, y, w, h, link=self.href))
                 self.pdf.set_x(x+w)
                 self.pdf.set_y(y+h)
         if tag=='b' or tag=='i' or tag=='u':

@@ -1019,14 +1019,19 @@ class FPDF:
                         rect = f'{pl[0]:.2f} {pl[1]:.2f} {pl[0] + pl[2]:.2f} {pl[1] - pl[3]:.2f}'
                         annots += '<</Type /Annot /Subtype /Link /Rect [' + rect + '] /Border [0 0 0] '
                         if isinstance(pl[4], str):
-                            annots += '/A <</S /URI /URI ' + \
-                                      self._textstring(pl[4]) + '>>>>'
+                            annots += f"/A <</S /URI /URI {self._textstring(pl[4])}>>>>"
                         else:
                             l = self.links[pl[4]]
-                            if l[0] in self.orientation_changes:
-                                h = w_pt
-                            else:
-                                h = h_pt
+                            h = w_pt
+
+                            # Note 20220206: This seems to be dead code... Links seem to appear properly both in
+                            #  portrait as well as in landscape orientation regardless of this part here...
+                            # if self.settings.def_orientation == "L":
+                            #     h = w_pt
+                            # else:
+                            #     h = h_pt
+
+
                             annots += f'/Dest [{1 + 2 * l[0]:d} 0 R /XYZ 0 {h - l[1] * self.settings.scale:.2f} null]>>'
                     self._out(annots + ']')
                 if self.pdf_version > '1.3':
@@ -1794,6 +1799,9 @@ class FPDF:
 
                 self.postprocess_image_dict(element)
 
+                if element.link:
+                    self.link(element.x, element.y, element.w, element.h, element.link)
+
             element_hex = element.to_string(self.settings)
 
             if isinstance(element_hex, str):
@@ -1909,7 +1917,7 @@ class FPDF:
                 raise RuntimeError('Invalid char "%s" for Code39' % c)
             for i, d in enumerate(chars[c]):
                 if i % 2 == 0:
-                    rectangle = Rectangle(x, y, dim[d], h, self.settings, "F")  # "F" stands for full
+                    rectangle = Rectangle(x, y, dim[d], h, "F")  # "F" stands for full
                     self.insert(rectangle)
                 x += dim[d]
             x += dim['n']

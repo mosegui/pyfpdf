@@ -129,7 +129,7 @@ class Figure(PDFElement):
 
     parsers = [JPGParser, PNGParser, GIFParser]
 
-    def __init__(self, name: str, x=None, y=None, w=0, h=0, is_mask=False, mask_image=None, settings=None):
+    def __init__(self, name: str, x=None, y=None, w=0, h=0, is_mask=False, mask_image=None, settings=None, link=None):
         self.name = name
         self.x = x
         self.y = y
@@ -138,6 +138,7 @@ class Figure(PDFElement):
         self.type = self._get_image_extension()
         self.settings = settings
         self.is_mask = is_mask
+        self.link = link
 
         self.info = self.get_image_info()
 

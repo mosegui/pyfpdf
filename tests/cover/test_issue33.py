@@ -12,8 +12,10 @@ from __future__ import with_statement
 
 import common
 from fpdf import FPDF
+from fpdf.pdf_elements import Figure
 
 import os, sys, tempfile
+
 try:
     try:
         import Image
@@ -91,7 +93,7 @@ def dotest(outputname, nostamp):
     pdf.ln()
     pdf.write(8, "        Transparency")
     pdf.ln()
-    pdf.image(gif1, x = 15, y = 15)
+    pdf.insert(Figure(gif1, x=15, y=15, settings=pdf.settings))
 
     pdf.write(8, "Transparency")
     pdf.ln()
@@ -99,7 +101,7 @@ def dotest(outputname, nostamp):
     pdf.ln()
     pdf.write(8, "        Transparency")
     pdf.ln()
-    pdf.image(gif2, x = 15, y = 39)
+    pdf.insert(Figure(gif2, x=15, y=39, settings=pdf.settings))
 
     pdf.output(outputname, 'F')
 

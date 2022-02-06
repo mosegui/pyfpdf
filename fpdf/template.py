@@ -12,7 +12,7 @@ import sys,os,csv
 from .fpdf import FPDF
 from .py3k import PY3K, basestring, unicode
 
-from fpdf.pdf_elements import Line, Rectangle
+from fpdf.pdf_elements import Line, Rectangle, Figure
 
 def rgb(col):
     return (col // 65536), (col // 256 % 256), (col% 256)
@@ -205,7 +205,7 @@ class Template:
 
     def image(self, pdf, x1=0, y1=0, x2=0, y2=0, text='', *args,**kwargs):
         if text:
-            pdf.image(text,x1,y1,w=x2-x1,h=y2-y1,type='',link='')
+            pdf.insert(Figure(text,x1,y1,w=x2-x1,h=y2-y1))
 
     def barcode(self, pdf, x1=0, y1=0, x2=0, y2=0, text='', font="arial", size=1,
              foreground=0, *args, **kwargs):

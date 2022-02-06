@@ -11,9 +11,12 @@
 
 import common
 from fpdf import FPDF
+from fpdf.pdf_elements import Figure
 
 import os
 import tempfile
+
+
 try:
     try:
         import Image
@@ -41,7 +44,7 @@ def dotest(outputname, nostamp):
     img2 = img.convert(mode = "RGBA")
     img2.save(img_new)
     # create pdf
-    pdf.image(img_new, x = 1, y = 1, w = width, h = height)
+    pdf.insert(Figure(img_new, x=1, y=1, w=width, h=height))
 
     pdf.output(outputname, 'F')
 

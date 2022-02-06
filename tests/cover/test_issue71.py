@@ -10,6 +10,7 @@
 
 import common
 from fpdf import FPDF
+from fpdf.pdf_elements import Figure
 
 import os
 
@@ -24,7 +25,7 @@ def dotest(outputname, nostamp):
     if not nostamp:
         # do not show picture in batch
         url = "http://upload.wikimedia.org/wikipedia/commons/thumb/0/0b/Code_3_of_9.svg/262px-Code_3_of_9.svg.png"
-        pdf.image(url, 10, 10)
+        pdf.insert(Figure(url, 10, 10, settings=pdf.settings))
 
     pdf.code39("*wikipedia*", 12.75, 7, 1.49)
 

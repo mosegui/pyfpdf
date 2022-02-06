@@ -1,5 +1,6 @@
 from fpdf import *
 import re
+from fpdf.pdf_elements import Figure
 
 class PDF(FPDF):
     def __init__(self, orientation = 'P', unit = 'mm', format = 'A4'):
@@ -83,18 +84,21 @@ on text, such as <A HREF="http://www.fpdf.org">www.fpdf.org</A>,
 or on an image: click on the logo."""
 
 pdf = PDF()
+
+link = pdf.add_link()
+
 # First page
 pdf.add_page()
 pdf.set_font('Arial', '', 20)
 pdf.write(5, 'To find out what\'s new in self tutorial, click ')
 pdf.set_font('', 'U')
-link = pdf.add_link()
 pdf.write(5, 'here', link)
 pdf.set_font('')
+
 # Second page
 pdf.add_page()
 pdf.set_link(link)
-pdf.image('logo.png', 10, 10, 30, 0, '', 'http://www.fpdf.org')
+pdf.insert(Figure('logo.png', 10, 10, 30, 0, link='http://www.fpdf.org'))
 pdf.settings.left_page_margin = 45
 pdf.set_font_size(14)
 pdf.write_html(html)

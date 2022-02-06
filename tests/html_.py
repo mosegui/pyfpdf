@@ -65,7 +65,6 @@ or on an image: click on the logo.<br>
         def header(self):
             figure = Figure('../tutorial/logo_pb.png', 10, 8, 33)
             self.insert(figure)
-            # self.image('../tutorial/logo_pb.png',10,8,33)
             self.set_font('Arial','B',15)
             self.cell(80)
             self.cell(30,10,'Title',1,0,'C')

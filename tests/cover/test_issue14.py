@@ -9,6 +9,7 @@
 
 import common
 from fpdf import FPDF
+from fpdf.pdf_elements import Figure
 
 import os
 
@@ -22,7 +23,7 @@ def dotest(outputname, nostamp):
 
     for i in range(1,41):
         # for flow mode, do not pass x or y:
-        pdf.image(os.path.join(common.basepath, '../tutorial/logo_pb.png'))
+        pdf.insert(Figure(os.path.join(common.basepath, '../tutorial/logo_pb.png'), settings=pdf.settings))
 
     pdf.output(outputname, 'F')
 
