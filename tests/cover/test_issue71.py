@@ -10,9 +10,8 @@
 
 import common
 from fpdf import FPDF
-from fpdf.pdf_elements import Figure
+from fpdf.pdf_elements import Figure, Barcode39
 
-import os
 
 @common.add_unittest
 def dotest(outputname, nostamp):
@@ -27,7 +26,7 @@ def dotest(outputname, nostamp):
         url = "http://upload.wikimedia.org/wikipedia/commons/thumb/0/0b/Code_3_of_9.svg/262px-Code_3_of_9.svg.png"
         pdf.insert(Figure(url, 10, 10, settings=pdf.settings))
 
-    pdf.code39("*wikipedia*", 12.75, 7, 1.49)
+    pdf.insert(Barcode39("*wikipedia*", 12.75, 7, 1.49))
 
     pdf.output(outputname, 'F')
 

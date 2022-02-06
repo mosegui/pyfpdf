@@ -202,3 +202,51 @@ class Figure(PDFElement):
         if not self.is_mask:
             return f"q {self.w * settings.scale:.2f} 0 0 {self.h * settings.scale:.2f} {self.x * settings.scale:.2f} " \
                    f"{(settings.height_unit - (self.y + self.h)) * settings.scale:.2f} cm /I{self.info['i']:d} Do Q"
+
+
+class Barcode39(PDFElement):  # Barcode 3 of 9
+
+    chars = {
+        '0': 'nnnwwnwnn', '1': 'wnnwnnnnw', '2': 'nnwwnnnnw',
+        '3': 'wnwwnnnnn', '4': 'nnnwwnnnw', '5': 'wnnwwnnnn',
+        '6': 'nnwwwnnnn', '7': 'nnnwnnwnw', '8': 'wnnwnnwnn',
+        '9': 'nnwwnnwnn', 'A': 'wnnnnwnnw', 'B': 'nnwnnwnnw',
+        'C': 'wnwnnwnnn', 'D': 'nnnnwwnnw', 'E': 'wnnnwwnnn',
+        'F': 'nnwnwwnnn', 'G': 'nnnnnwwnw', 'H': 'wnnnnwwnn',
+        'I': 'nnwnnwwnn', 'J': 'nnnnwwwnn', 'K': 'wnnnnnnww',
+        'L': 'nnwnnnnww', 'M': 'wnwnnnnwn', 'N': 'nnnnwnnww',
+        'O': 'wnnnwnnwn', 'P': 'nnwnwnnwn', 'Q': 'nnnnnnwww',
+        'R': 'wnnnnnwwn', 'S': 'nnwnnnwwn', 'T': 'nnnnwnwwn',
+        'U': 'wwnnnnnnw', 'V': 'nwwnnnnnw', 'W': 'wwwnnnnnn',
+        'X': 'nwnnwnnnw', 'Y': 'wwnnwnnnn', 'Z': 'nwwnwnnnn',
+        '-': 'nwnnnnwnw', '.': 'wwnnnnwnn', ' ': 'nwwnnnwnn',
+        '*': 'nwnnwnwnn', '$': 'nwnwnwnnn', '/': 'nwnwnnnwn',
+        '+': 'nwnnnwnwn', '%': 'nnnwnwnwn',
+    }
+
+    def __init__(self, txt, x, y, w=1.5, h=5.0):
+        self.txt = txt.upper()
+        self.x = x
+        self.y = y
+        self.w = w
+        self.h = h
+
+        self.dim = {'w': self.w, 'n': self.w / 3.}
+
+        assert all([char in self.chars.keys() for char in self.txt]), "Invalid chars for Code39"
+
+    def to_string(self, settings):
+        hex = []
+
+        for char in self.txt:
+            for idx, d in enumerate(self.chars[char]):
+                if idx % 2 == 0:
+                    hex.append(Rectangle(self.x, self.y, self.dim[d], self.h, "F").to_string(settings))  # "F" stands for full
+                self.x += self.dim[d]
+            self.x += self.dim['n']
+
+        return hex
+
+
+class BarcodeI25(PDFElement):  # Barcode Interleaved 2 of 5
+    pass

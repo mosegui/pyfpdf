@@ -31,7 +31,7 @@ from .py3k import PY3K, pickle, basestring, exception, hashpath
 
 from .helpers import get_page_dimensions, load_cache, CatchAllError, check_page
 from .pdf_settings import PDFSettings
-from .pdf_elements import Rectangle, Figure
+from .pdf_elements import Rectangle, Figure, Barcode39
 
 
 # Global variables
@@ -1546,6 +1546,9 @@ class FPDF:
                 if element.link:
                     self.link(element.x, element.y, element.w, element.h, element.link)
 
+            elif isinstance(element, Barcode39):
+                self.set_fill_color(0)
+
             element_hex = element.to_string(self.settings)
 
             if isinstance(element_hex, str):
@@ -1633,35 +1636,3 @@ class FPDF:
                     self.insert(rectangle)
 
                 x += line_width
-
-    @check_page
-    def code39(self, txt, x, y, w=1.5, h=5.0):
-        """Barcode 3of9"""
-        dim = {'w': w, 'n': w / 3.}
-        chars = {
-            '0': 'nnnwwnwnn', '1': 'wnnwnnnnw', '2': 'nnwwnnnnw',
-            '3': 'wnwwnnnnn', '4': 'nnnwwnnnw', '5': 'wnnwwnnnn',
-            '6': 'nnwwwnnnn', '7': 'nnnwnnwnw', '8': 'wnnwnnwnn',
-            '9': 'nnwwnnwnn', 'A': 'wnnnnwnnw', 'B': 'nnwnnwnnw',
-            'C': 'wnwnnwnnn', 'D': 'nnnnwwnnw', 'E': 'wnnnwwnnn',
-            'F': 'nnwnwwnnn', 'G': 'nnnnnwwnw', 'H': 'wnnnnwwnn',
-            'I': 'nnwnnwwnn', 'J': 'nnnnwwwnn', 'K': 'wnnnnnnww',
-            'L': 'nnwnnnnww', 'M': 'wnwnnnnwn', 'N': 'nnnnwnnww',
-            'O': 'wnnnwnnwn', 'P': 'nnwnwnnwn', 'Q': 'nnnnnnwww',
-            'R': 'wnnnnnwwn', 'S': 'nnwnnnwwn', 'T': 'nnnnwnwwn',
-            'U': 'wwnnnnnnw', 'V': 'nwwnnnnnw', 'W': 'wwwnnnnnn',
-            'X': 'nwnnwnnnw', 'Y': 'wwnnwnnnn', 'Z': 'nwwnwnnnn',
-            '-': 'nwnnnnwnw', '.': 'wwnnnnwnn', ' ': 'nwwnnnwnn',
-            '*': 'nwnnwnwnn', '$': 'nwnwnwnnn', '/': 'nwnwnnnwn',
-            '+': 'nwnnnwnwn', '%': 'nnnwnwnwn',
-        }
-        self.set_fill_color(0)
-        for c in txt.upper():
-            if c not in chars:
-                raise RuntimeError('Invalid char "%s" for Code39' % c)
-            for i, d in enumerate(chars[c]):
-                if i % 2 == 0:
-                    rectangle = Rectangle(x, y, dim[d], h, "F")  # "F" stands for full
-                    self.insert(rectangle)
-                x += dim[d]
-            x += dim['n']
