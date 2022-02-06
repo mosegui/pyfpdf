@@ -46,7 +46,7 @@ class PDF(FPDF):
         if tag == 'A':
             self.href = attr['HREF']
         if tag == 'BR':
-            self.ln(5)
+            self.newline(5)
 
     def close_tag(self, tag):
         # Closing tag

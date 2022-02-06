@@ -14,7 +14,7 @@ from fpdf import FPDF
 def page(pdf, text, orientation, format):
     pdf.add_page(orientation = orientation, format = format)
     pdf.write(8, text)
-    pdf.ln(8)
+    pdf.newline(8)
 
 @common.add_unittest
 def dotest(outputname, nostamp):

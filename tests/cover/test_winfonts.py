@@ -48,7 +48,7 @@ def dotest(outputname, nostamp):
 
     # Select a standard font (uses windows-1252)
     pdf.set_font('Arial','',14)
-    pdf.ln(10)
+    pdf.newline(10)
     pdf.write(5, 'The file size of this PDF is only 12 KB.')
 
     pdf.output(outputname, 'F')

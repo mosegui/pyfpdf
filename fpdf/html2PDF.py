@@ -144,7 +144,7 @@ class HTML2FPDF(html.parser.HTMLParser):
                 self.box_shadow(cell[0], cell[1], bgcolor)
                 self.pdf.cell(*cell)
             self.set_style('B',b)
-            self.pdf.ln(self.theader[0][0][1])
+            self.pdf.newline(self.theader[0][0][1])
             self.pdf.set_x(self.table_offset)
             #self.pdf.set_x(x)
         self.theader_out = True
@@ -157,7 +157,7 @@ class HTML2FPDF(html.parser.HTMLParser):
             for cell, bgcolor in self.tfooter:
                 self.box_shadow(cell[0], cell[1], bgcolor)
                 self.pdf.cell(*cell)
-            self.pdf.ln(self.tfooter[0][0][1])
+            self.pdf.newline(self.tfooter[0][0][1])
             self.pdf.set_x(x)
         if int(self.table.get('border', 0)):
             self.output_table_sep()
@@ -179,14 +179,14 @@ class HTML2FPDF(html.parser.HTMLParser):
         if tag=='a':
             self.href=attrs['href']
         if tag=='br':
-            self.pdf.ln(5)
+            self.pdf.newline(5)
         if tag=='p':
-            self.pdf.ln(5)
+            self.pdf.newline(5)
             if attrs:
                 if attrs: self.align = attrs.get('align')
         if tag in self.hsize:
             k = self.hsize[tag]
-            self.pdf.ln(5*k)
+            self.pdf.newline(5 * k)
             self.pdf.set_text_color(150,0,0)
             self.pdf.set_font_size(12 * k)
             if attrs: self.align = attrs.get('align')
@@ -200,7 +200,7 @@ class HTML2FPDF(html.parser.HTMLParser):
             self.pre = True
         if tag=='blockquote':
             self.set_text_color(100,0,45)
-            self.pdf.ln(3)
+            self.pdf.newline(3)
         if tag=='ul':
             self.indent+=1
             self.bullet.append('\x95')
@@ -208,7 +208,7 @@ class HTML2FPDF(html.parser.HTMLParser):
             self.indent+=1
             self.bullet.append(0)
         if tag=='li':
-            self.pdf.ln(self.h+2)
+            self.pdf.newline(self.h + 2)
             self.pdf.set_text_color(190,0,0)
             bullet = self.bullet[self.indent-1]
             if not isinstance(bullet, str):
@@ -250,7 +250,7 @@ class HTML2FPDF(html.parser.HTMLParser):
             self.thead = None
             self.tfoot = None
             self.table_h = 0
-            self.pdf.ln()
+            self.pdf.newline()
         if tag=='tr':
             self.tr = dict([(k.lower(), v) for k,v in attrs.items()])
             self.table_col_index = 0
@@ -286,7 +286,7 @@ class HTML2FPDF(html.parser.HTMLParser):
         #Closing tag
         if DEBUG: print("ENDTAG", tag)
         if tag=='h1' or tag=='h2' or tag=='h3' or tag=='h4':
-            self.pdf.ln(6)
+            self.pdf.newline(6)
             self.set_font()
             self.set_style()
             self.align = None
@@ -296,7 +296,7 @@ class HTML2FPDF(html.parser.HTMLParser):
             self.pre=False
         if tag=='blockquote':
             self.set_text_color(0,0,0)
-            self.pdf.ln(3)
+            self.pdf.newline(3)
         if tag=='strong':
             tag='b'
         if tag=='em':
@@ -317,7 +317,7 @@ class HTML2FPDF(html.parser.HTMLParser):
             self.th = False
             self.theader = None
             self.tfooter = None
-            self.pdf.ln()
+            self.pdf.newline()
         if tag=='thead':
             self.thead = None
         if tag=='tfoot':
@@ -329,7 +329,7 @@ class HTML2FPDF(html.parser.HTMLParser):
         if tag=='tr':
             h = self.table_h
             if self.tfoot is None:
-                self.pdf.ln(h)
+                self.pdf.newline(h)
             self.tr = None
         if tag=='td' or tag=='th':
             if self.th:
@@ -393,9 +393,9 @@ class HTML2FPDF(html.parser.HTMLParser):
         self.set_text_color(0)
 
     def put_line(self):
-        self.pdf.ln(2)
+        self.pdf.newline(2)
         self.pdf.insert(Line(self.pdf.get_x(),self.pdf.get_y(),self.pdf.get_x() + 187, self.pdf.get_y(), self.pdf.settings))
-        self.pdf.ln(3)
+        self.pdf.newline(3)
 
 class HTMLMixin(object):
     def write_html(self, text, image_map=None):

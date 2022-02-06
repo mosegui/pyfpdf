@@ -20,7 +20,7 @@ class PDF(FPDF):
         # Title
         self.cell(w, 9, title, 1, 1, 'C', 1)
         # Line break
-        self.ln(10)
+        self.newline(10)
 
     def footer(self):
         # Position at 1.5 cm from bottom
@@ -40,7 +40,7 @@ class PDF(FPDF):
         # Title
         self.cell(0, 6, 'Chapter %d : %s' % (num, label), 0, 1, 'L', 1)
         # Line break
-        self.ln(4)
+        self.newline(4)
 
     def chapter_body(self, name):
         # Read text file
@@ -51,7 +51,7 @@ class PDF(FPDF):
         # Output justified text
         self.multi_cell(0, 5, txt)
         # Line break
-        self.ln()
+        self.newline()
         # Mention in italics
         self.set_font('', 'I')
         self.cell(0, 5, '(end of excerpt)')

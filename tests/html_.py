@@ -68,7 +68,7 @@ or on an image: click on the logo.<br>
             self.set_font('Arial','B',15)
             self.cell(80)
             self.cell(30,10,'Title',1,0,'C')
-            self.ln(20)
+            self.newline(20)
             
         def footer(self):
             self.set_y(-15)

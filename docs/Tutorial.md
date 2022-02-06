@@ -87,6 +87,7 @@ Here is a two page example with header, footer and logo:
 ```python
 from fpdf import FPDF
 
+
 class PDF(FPDF):
     def header(self):
         # Logo
@@ -98,7 +99,7 @@ class PDF(FPDF):
         # Title
         self.cell(30, 10, 'Title', 1, 0, 'C')
         # Line break
-        self.ln(20)
+        self.newline(20)
 
     # Page footer
     def footer(self):
@@ -108,6 +109,7 @@ class PDF(FPDF):
         self.set_font('Arial', 'I', 8)
         # Page number
         self.cell(0, 10, 'Page ' + str(self.page_no()) + '/{nb}', 0, 0, 'C')
+
 
 # Instantiation of inherited class
 pdf = PDF()
@@ -160,6 +162,7 @@ from fpdf import FPDF
 
 title = '20000 Leagues Under the Seas'
 
+
 class PDF(FPDF):
     def header(self):
         # Arial bold 15
@@ -176,7 +179,7 @@ class PDF(FPDF):
         # Title
         self.cell(w, 9, title, 1, 1, 'C', 1)
         # Line break
-        self.ln(10)
+        self.newline(10)
 
     def footer(self):
         # Position at 1.5 cm from bottom
@@ -196,7 +199,7 @@ class PDF(FPDF):
         # Title
         self.cell(0, 6, 'Chapter %d : %s' % (num, label), 0, 1, 'L', 1)
         # Line break
-        self.ln(4)
+        self.newline(4)
 
     def chapter_body(self, name):
         # Read text file
@@ -207,7 +210,7 @@ class PDF(FPDF):
         # Output justified text
         self.multi_cell(0, 5, txt)
         # Line break
-        self.ln()
+        self.newline()
         # Mention in italics
         self.set_font('', 'I')
         self.cell(0, 5, '(end of excerpt)')
@@ -216,6 +219,7 @@ class PDF(FPDF):
         self.add_page()
         self.chapter_title(num, title)
         self.chapter_body(name)
+
 
 pdf = PDF()
 pdf.set_title(title)

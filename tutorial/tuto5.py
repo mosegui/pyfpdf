@@ -17,12 +17,12 @@ class PDF(FPDF):
         # Header
         for col in header:
             self.cell(40, 7, col, 1)
-        self.ln()
+        self.newline()
 	    # Data
         for row in data:
             for col in row:
                 self.cell(40, 6, col, 1)
-            self.ln()
+            self.newline()
 
     # Better table
     def improved_table(self, header, data):
@@ -31,14 +31,14 @@ class PDF(FPDF):
         # Header
         for i in range(0, len(header)):
             self.cell(w[i], 7, header[i], 1, 0, 'C')
-        self.ln()
+        self.newline()
         # Data
         for row in data:
             self.cell(w[0], 6, row[0], 'LR')
             self.cell(w[1], 6, row[1], 'LR')
             self.cell(w[2], 6, row[2], 'LR', 0, 'R')
             self.cell(w[3], 6, row[3], 'LR', 0, 'R')
-            self.ln()
+            self.newline()
         # Closure line
         self.cell(sum(w), 0, '', 'T')
 
@@ -54,7 +54,7 @@ class PDF(FPDF):
         w = [40, 35, 40, 45]
         for i in range(0, len(header)):
             self.cell(w[i], 7, header[i], 1, 0, 'C', 1)
-        self.ln()
+        self.newline()
         # Color and font restoration
         self.set_fill_color(224, 235, 255)
         self.set_text_color(0)
@@ -66,7 +66,7 @@ class PDF(FPDF):
             self.cell(w[1], 6, row[1], 'LR', 0, 'L', fill)
             self.cell(w[2], 6, row[2], 'LR', 0, 'R', fill)
             self.cell(w[3], 6, row[3], 'LR', 0, 'R', fill)
-            self.ln()
+            self.newline()
             fill = not fill
         self.cell(sum(w), 0, '', 'T')
 

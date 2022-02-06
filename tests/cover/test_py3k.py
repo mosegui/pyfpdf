@@ -20,7 +20,7 @@ def dotest(outputname, nostamp):
 
     pdf.add_page()
     pdf.set_font('Arial', '', 14)  
-    pdf.ln(10)
+    pdf.newline(10)
     if nostamp:
         data = "TEST-TEST-TEST"
     else:

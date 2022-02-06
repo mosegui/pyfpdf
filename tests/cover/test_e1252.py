@@ -305,10 +305,10 @@ class MyPDF(FPDF):
     def header(self):
         self.set_font('Arial', 'B', 14)
         self.write(10, self.p_hdr1)
-        self.ln(10)
+        self.newline(10)
         self.set_font('Arial', '', 14)
         self.write(10, self.p_hdr2)
-        self.ln(10)
+        self.newline(10)
 
     def footer(self):
         self.set_y(-15)
@@ -346,7 +346,7 @@ def dotest(outputname, nostamp):
         pdf.cell(35, 8, txt = "Name", border = 1, align = "C")
         pdf.cell(20, 8, txt = "WinAnsi", border = 1, align = "C")
         pdf.cell(20, 8, txt = "Unicode", border = 1, align = "C")
-        pdf.ln()
+        pdf.newline()
     
     pdf.table_cnt = 0
     def print_char(char, name, code):
@@ -419,7 +419,7 @@ def dotest(outputname, nostamp):
         pdf.cell(20, 8, txt = hcode, border = 1, align = "L")
         pdf.cell(20, 8, txt = alt, border = 1, align = "L")
 
-        pdf.ln()
+        pdf.newline()
 
 
     used = {}
@@ -492,19 +492,19 @@ def dotest(outputname, nostamp):
         codec[x % 16] = code
         pdf.cell(12, 8, txt = txt, border = "LRT", align = "C", fill = True)
         if x % 16 == 15:
-            pdf.ln()
+            pdf.newline()
             pdf.set_font('Arial', '', 6)
             for i in range(16):
                 pdf.set_fill_color(*cc[i])
                 pdf.cell(12, 3, txt = codec[i],
                     border = "LR", align = "C", fill = True)
-            pdf.ln()
+            pdf.newline()
             pdf.set_font('Arial', '', 6)
             for i in range(16):
                 pdf.set_fill_color(*cc[i])
                 pdf.cell(12, 3, txt = "0x%02X" % (x - 15 + i),
                     border = "LRB", align = "C", fill = True)
-            pdf.ln()
+            pdf.newline()
 
     pdf.output(outputname, 'F')
 

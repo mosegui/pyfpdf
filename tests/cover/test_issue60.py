@@ -31,7 +31,7 @@ def dotest(outputname, nostamp):
     # this will be displayed wrong as actually it is stored LTR:
     text= u"این یک متن پارسی است. This is a Persian text !!"
     pdf.write(8, text)
-    pdf.ln(8)
+    pdf.newline(8)
     # Reverse the RLT using the Bidirectional Algorithm to be displayed correctly:
     # (http://unicode.org/reports/tr9/)
     rtl_text = get_display(text)

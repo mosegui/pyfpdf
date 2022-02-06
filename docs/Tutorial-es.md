@@ -59,10 +59,11 @@ Finalmente, el documento es cerrado y enviado al explorador con [output](referen
 
 ## Encabezado, pie de página, salto de página e imágen ##
 
-Aquí hay un ejemplo de dos páginas con encabezado, pie y logo: 
+Aquí hay un ejemplo de dos páginas con encabezado, pie y logo:
 
 ```python
 from fpdf import FPDF
+
 
 class PDF(FPDF):
     def header(self):
@@ -75,7 +76,7 @@ class PDF(FPDF):
         # Title
         self.cell(30, 10, 'Title', 1, 0, 'C')
         # Line break
-        self.ln(20)
+        self.newline(20)
 
     # Page footer
     def footer(self):
@@ -85,6 +86,7 @@ class PDF(FPDF):
         self.set_font('Arial', 'I', 8)
         # Page number
         self.cell(0, 10, 'Page ' + str(self.page_no()) + '/{nb}', 0, 0, 'C')
+
 
 # Instantiation of inherited class
 pdf = PDF()
@@ -110,10 +112,12 @@ Otra característica interesante es usada aquí: el salto de página automático
 ## Saltos de línea y colores ##
 
 Continuemos con un ejemplo que imprime parrafos justificados. También ilustra el uso de colores.
+
 ```python
 from fpdf import FPDF
 
 title = '20000 Leagues Under the Seas'
+
 
 class PDF(FPDF):
     def header(self):
@@ -131,7 +135,7 @@ class PDF(FPDF):
         # Titulo
         self.cell(w, 9, title, 1, 1, 'C', 1)
         # Salto de línea
-        self.ln(10)
+        self.newline(10)
 
     def footer(self):
         # Posición a 1.5 cm desde abajo
@@ -151,7 +155,7 @@ class PDF(FPDF):
         # Titulo
         self.cell(0, 6, 'Chapter %d : %s' % (num, label), 0, 1, 'L', 1)
         # Salto de línea
-        self.ln(4)
+        self.newline(4)
 
     def chapter_body(self, name):
         # Leer archivo de texto
@@ -162,7 +166,7 @@ class PDF(FPDF):
         # Emitir texto justificado
         self.multi_cell(0, 5, txt)
         # Salto de línea
-        self.ln()
+        self.newline()
         # Mención en italic -cursiva-
         self.set_font('', 'I')
         self.cell(0, 5, '(end of excerpt)')
@@ -171,6 +175,7 @@ class PDF(FPDF):
         self.add_page()
         self.chapter_title(num, title)
         self.chapter_body(name)
+
 
 pdf = PDF()
 pdf.set_title(title)

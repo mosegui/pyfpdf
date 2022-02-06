@@ -37,7 +37,7 @@ cnt = 0
 for char in ttf.saveChar:
     cnt += 1
     pdf.write(8, u"%03d) %06x - %c" % (cnt, char, char))
-    pdf.ln()
+    pdf.newline()
     if cnt >= 999:
         break
 

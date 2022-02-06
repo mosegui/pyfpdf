@@ -19,7 +19,7 @@ class PDF(FPDF):
         self.set_text_color(220, 50, 50)
         self.set_line_width(1)
         self.cell(w, 9, title, 1, 1, 'C', 1)
-        self.ln(10)
+        self.newline(10)
         # Save ordinate
         self.y0 = self.get_y()
 
@@ -57,7 +57,7 @@ class PDF(FPDF):
         self.set_font('Arial', '', 12)
         self.set_fill_color(200, 220, 255)
         self.cell(0, 6, 'Chapter %d : %s' % (num, label), 0, 1, 'L', 1)
-        self.ln(4)
+        self.newline(4)
         # Save ordinate
         self.y0 = self.get_y()
 
@@ -69,7 +69,7 @@ class PDF(FPDF):
         self.set_font('Times', '', 12)
         # Output text in a 6 cm width column
         self.multi_cell(60, 5, txt)
-        self.ln()
+        self.newline()
         # Mention
         self.set_font('', 'I')
         self.cell(0, 5, '(end of excerpt)')

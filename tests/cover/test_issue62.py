@@ -40,7 +40,7 @@ m   n   ň   o   ó   ô   p   q   r   ŕ   s   š   t   ť   u   ú   v   w   x
 """
 
     pdf.write(8, text)
-    pdf.ln(8)
+    pdf.newline(8)
     pdf.output(outputname, 'F')
     
 def main():

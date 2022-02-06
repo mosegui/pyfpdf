@@ -20,18 +20,18 @@ from enum import Enum
 from datetime import datetime
 import math
 import errno
-import os, sys, zlib, re, tempfile, struct
+import os, sys, zlib, re
 
 from contextlib import contextmanager
 
 from .ttfonts import TTFontFile
 from .fonts import fpdf_charwidths
 from .php import substr, UTF8ToUTF16BE, UTF8StringToArray
-from .py3k import PY3K, pickle, urlopen, BytesIO, Image, basestring, unicode, exception, b, hashpath
+from .py3k import PY3K, pickle, basestring, exception, hashpath
 
-from .helpers import get_page_dimensions, load_cache, CatchAllError, check_page, get_op_from_draw_style, load_resource
+from .helpers import get_page_dimensions, load_cache, CatchAllError, check_page
 from .pdf_settings import PDFSettings
-from .pdf_elements import Line, Rectangle, Figure
+from .pdf_elements import Rectangle, Figure
 
 
 # Global variables
@@ -802,89 +802,12 @@ class FPDF:
             self.cell(l / 1000.0 * self.font_size, h, substr(s, j), 0, 0, '', 0, link)
 
     @check_page
-    def image(self, name, x=None, y=None, w=0, h=0, type='', link='', is_mask=False, mask_image=None):
-        """Put an image on the page"""
-        if name not in self.images:
-            # First use of image, get info
-            if type == '':
-                pos = name.rfind('.')
-                if not pos:
-                    raise CatchAllError('image file has no extension and no type was specified: ' + name)
-                type = substr(name, pos + 1)
-            type = type.lower()
-            if type == 'jpg' or type == 'jpeg':
-                info = self._parsejpg(name)
-            elif type == 'png':
-                info = self._parsepng(name)
-            else:
-                # Allow for additional formats
-                # maybe the image is not showing the correct extension,
-                # but the header is OK,
-                succeed_parsing = False
-                # try all the parsing functions
-                parsing_functions = [self._parsejpg, self._parsepng, self._parsegif]
-                for pf in parsing_functions:
-                    try:
-                        info = pf(name)
-                        succeed_parsing = True
-                        break
-                    except:
-                        pass
-                # last resource
-                if not succeed_parsing:
-                    mtd = '_parse' + type
-                    if not hasattr(self, mtd):
-                        raise CatchAllError('Unsupported image type: ' + type)
-                    info = getattr(self, mtd)(name)
-                mtd = '_parse' + type
-                if not hasattr(self, mtd):
-                    raise CatchAllError('Unsupported image type: ' + type)
-                info = getattr(self, mtd)(name)
-
-            info['i'] = len(self.images) + 1
-            # is_mask and mask_image
-            if is_mask and info['cs'] != 'DeviceGray':
-                raise CatchAllError('Mask must be a gray scale image')
-            if mask_image:
-                info['masked'] = mask_image
-            self.images[name] = info
-        else:
-            info = self.images[name]
-        # Automatic width and height calculation if needed
-        if w == 0 and h == 0:
-            # Put image at 72 dpi
-            w = info['w'] / self.settings.scale
-            h = info['h'] / self.settings.scale
-        elif w == 0:
-            w = h * info['w'] / info['h']
-        elif h == 0:
-            h = w * info['h'] / info['w']
-        # Flowing mode
-        if y is None:
-            if self.y + h > self.settings.page_break_trigger and not self.in_footer and self.settings.auto_page_break:
-                # Automatic page break
-                x = self.x
-                self.add_page(same=True)
-                self.x = x
-            y = self.y
-            self.y += h
-        if x is None:
-            x = self.x
-        if not is_mask:
-            self._out(f"q {w * self.settings.scale:.2f} 0 0 {h * self.settings.scale:.2f} {x * self.settings.scale:.2f} {(self.settings.height_unit - (y + h)) * self.settings.scale:.2f} cm /I{info['i']:d} Do Q")
-        if link:
-            self.link(x, y, w, h, link)
-
-        return info
-
-    @check_page
-    def ln(self, h=''):
+    def newline(self, h=None):
         """Line Feed; default value is last cell height"""
+        y_shift = h if h else self.lasth
+
         self.x = self.settings.left_page_margin
-        if isinstance(h, basestring):
-            self.y += self.lasth
-        else:
-            self.y += h
+        self.y += y_shift
 
     def get_x(self):
         """Get x position"""
@@ -1587,185 +1510,6 @@ class FPDF:
                f'{w * self.settings.scale:.2f} ' \
                f'{-ut / 1000.0 * self.settings.font_size_pt:.2f} ' \
                f're f'
-
-    def _parsejpg(self, filename):
-        # Extract info from a JPEG file
-        f = None
-        try:
-            f = load_resource("image", filename)
-            while True:
-                markerHigh, markerLow = struct.unpack('BB', f.read(2))
-                if markerHigh != 0xFF or markerLow < 0xC0:
-                    raise SyntaxError('No JPEG marker found')
-                elif markerLow == 0xDA:  # SOS
-                    raise SyntaxError('No JPEG SOF marker found')
-                elif (markerLow == 0xC8 or  # JPG
-                      (0xD0 <= markerLow <= 0xD9) or  # RSTx
-                      (0xF0 <= markerLow <= 0xFD)):  # JPGx
-                    pass
-                else:
-                    dataSize, = struct.unpack('>H', f.read(2))
-                    data = f.read(dataSize - 2) if dataSize > 2 else ''
-                    if ((0xC0 <= markerLow <= 0xC3) or  # SOF0 - SOF3
-                            (0xC5 <= markerLow <= 0xC7) or  # SOF4 - SOF7
-                            (0xC9 <= markerLow <= 0xCB) or  # SOF9 - SOF11
-                            (0xCD <= markerLow <= 0xCF)):  # SOF13 - SOF15
-                        bpc, height, width, layers = struct.unpack_from('>BHHB', data)
-                        colspace = 'DeviceRGB' if layers == 3 else ('DeviceCMYK' if layers == 4 else 'DeviceGray')
-                        break
-        except Exception:
-            if f:
-                f.close()
-            raise CatchAllError('Missing or incorrect image file: %s. error: %s' % (filename, str(exception())))
-
-        with f:
-            # Read whole file from the start
-            f.seek(0)
-            data = f.read()
-        return {'w': width, 'h': height, 'cs': colspace, 'bpc': bpc, 'f': 'DCTDecode', 'data': data}
-
-    def _parsegif(self, filename):
-        # Extract info from a GIF file (via PNG conversion)
-        if Image is None:
-            raise CatchAllError('PIL is required for GIF support')
-        try:
-            im = Image.open(filename)
-        except:
-            raise CatchAllError('Missing or incorrect image file: %s. error: %s' % (filename, str(exception())))
-        else:
-            # Use temporary file
-            with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as \
-                    f:
-                tmp = f.name
-            if "transparency" in im.info:
-                im.save(tmp, transparency=im.info['transparency'])
-            else:
-                im.save(tmp)
-            info = self._parsepng(tmp)
-            os.unlink(tmp)
-        return info
-
-    def _parsepng(self, filename):
-        # Extract info from a PNG file
-        f = load_resource("image", filename)
-        # Check signature
-        magic = f.read(8).decode("latin1")
-        signature = '\x89' + 'PNG' + '\r' + '\n' + '\x1a' + '\n'
-        if not PY3K: signature = signature.decode("latin1")
-        if magic != signature:
-            raise CatchAllError('Not a PNG file: ' + filename)
-        # Read header chunk
-        f.read(4)
-        chunk = f.read(4).decode("latin1")
-        if chunk != 'IHDR':
-            raise CatchAllError('Incorrect PNG file: ' + filename)
-        w = self._freadint(f)
-        h = self._freadint(f)
-        bpc = ord(f.read(1))
-        if (bpc > 8):
-            raise CatchAllError('16-bit depth not supported: ' + filename)
-        ct = ord(f.read(1))
-        if ct == 0 or ct == 4:
-            colspace = 'DeviceGray'
-        elif ct == 2 or ct == 6:
-            colspace = 'DeviceRGB'
-        elif ct == 3:
-            colspace = 'Indexed'
-        else:
-            raise CatchAllError('Unknown color type: ' + filename)
-        if ord(f.read(1)) != 0:
-            raise CatchAllError('Unknown compression method: ' + filename)
-        if ord(f.read(1)) != 0:
-            raise CatchAllError('Unknown filter method: ' + filename)
-        if ord(f.read(1)) != 0:
-            raise CatchAllError('Interlacing not supported: ' + filename)
-        f.read(4)
-        dp = '/Predictor 15 /Colors '
-        if colspace == 'DeviceRGB':
-            dp += '3'
-        else:
-            dp += '1'
-        dp += ' /BitsPerComponent ' + str(bpc) + ' /Columns ' + str(w) + ''
-        # Scan chunks looking for palette, transparency and image data
-        pal = ''
-        trns = ''
-        data = bytes() if PY3K else str()
-        n = 1
-        while n is not None:
-            n = self._freadint(f)
-            type = f.read(4).decode("latin1")
-            if type == 'PLTE':
-                # Read palette
-                pal = f.read(n)
-                f.read(4)
-            elif type == 'tRNS':
-                # Read transparency info
-                t = f.read(n)
-                if ct == 0:
-                    trns = [ord(substr(t, 1, 1)), ]
-                elif ct == 2:
-                    trns = [ord(substr(t, 1, 1)), ord(substr(t, 3, 1)), ord(substr(t, 5, 1))]
-                else:
-                    pos = t.find('\x00'.encode("latin1"))
-                    if pos != -1:
-                        trns = [pos, ]
-                f.read(4)
-            elif type == 'IDAT':
-                # Read image data block
-                data += f.read(n)
-                f.read(4)
-            elif type == 'IEND':
-                break
-            else:
-                f.read(n + 4)
-
-        if colspace == 'Indexed' and not pal:
-            raise CatchAllError('Missing palette in ' + filename)
-        f.close()
-        info = {'w': w, 'h': h, 'cs': colspace, 'bpc': bpc, 'f': 'FlateDecode', 'dp': dp, 'pal': pal, 'trns': trns, }
-        if ct >= 4:
-            # Extract alpha channel
-            data = zlib.decompress(data)
-            color = b('')
-            alpha = b('')
-            if ct == 4:
-                # Gray image
-                length = 2 * w
-                for i in range(h):
-                    pos = (1 + length) * i
-                    color += b(data[pos])
-                    alpha += b(data[pos])
-                    line = substr(data, pos + 1, length)
-                    re_c = re.compile('(.).'.encode("ascii"), flags=re.DOTALL)
-                    re_a = re.compile('.(.)'.encode("ascii"), flags=re.DOTALL)
-                    color += re_c.sub(lambda m: m.group(1), line)
-                    alpha += re_a.sub(lambda m: m.group(1), line)
-            else:
-                # RGB image
-                length = 4 * w
-                for i in range(h):
-                    pos = (1 + length) * i
-                    color += b(data[pos])
-                    alpha += b(data[pos])
-                    line = substr(data, pos + 1, length)
-                    re_c = re.compile('(...).'.encode("ascii"), flags=re.DOTALL)
-                    re_a = re.compile('...(.)'.encode("ascii"), flags=re.DOTALL)
-                    color += re_c.sub(lambda m: m.group(1), line)
-                    alpha += re_a.sub(lambda m: m.group(1), line)
-            del data
-            data = zlib.compress(color)
-            info['smask'] = zlib.compress(alpha)
-            if self.pdf_version < '1.4':
-                self.pdf_version = '1.4'
-        info['data'] = data
-        return info
-
-    def _freadint(self, f):
-        # Read a 4-byte integer from file
-        try:
-            return struct.unpack('>I', f.read(4))[0]
-        except:
-            return None
 
     def _textstring(self, s):
         # Format a text string

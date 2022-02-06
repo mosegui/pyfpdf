@@ -1,7 +1,7 @@
 ## ln ##
 
 ```python
-fpdf.ln(h = '')
+fpdf.newline(h='')
 ```
 
 ### Description ###

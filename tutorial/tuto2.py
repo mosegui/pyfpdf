@@ -14,7 +14,7 @@ class PDF(FPDF):
         # Title
         self.cell(30, 10, 'Title', 1, 0, 'C')
         # Line break
-        self.ln(20)
+        self.newline(20)
 
     # Page footer
     def footer(self):
